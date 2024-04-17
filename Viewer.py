@@ -239,7 +239,7 @@ class Viewer(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('Google Calendar Viewer')
+        self.setWindowTitle('PSS Schedule Viewer')
         self.setGeometry(100, 100, 800, 600)  # Increased window size
 
         layout = QVBoxLayout()
