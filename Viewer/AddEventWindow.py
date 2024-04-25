@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QPushButton, QLineEdit, QHeaderView, QLabel, QComboBox, QHBoxLayout, QDialog, QCheckBox, QColorDialog, QPlainTextEdit, QErrorMessage
 from PyQt5.QtGui import QColor, QTextCursor
 from PyQt5.QtCore import Qt
-from Viewer import QColorButton
+from Viewer.QColorButton import QColorButton
 
 class AddEventWindow(QDialog):
     def __init__(self, viewer, event_details=None):

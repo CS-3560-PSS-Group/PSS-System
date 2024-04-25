@@ -103,5 +103,6 @@ class Viewer(QWidget):
                 item.setBackground(color)
                 item.setTextAlignment(Qt.AlignTop)
                 self.tableWidget.setItem(row, column_index, item)
+                
                 if row == start_row_index:
                     self.tableWidget.setSpan(row, column_index, end_row_index - start_row_index + 1, 1)
