@@ -6,3 +6,4 @@ if __name__ == '__main__':
     viewer = Viewer()
     viewer.show()
     app.exec_()
+ 

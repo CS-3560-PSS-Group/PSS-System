@@ -7,24 +7,31 @@ class AddEventWindow(QDialog):
     def __init__(self, viewer, event_details=None):
         super().__init__()
         self.viewer = viewer
+        self.event_details = event_details
+        self.description = ""
+        
+        # Set window title and geometry
         self.setWindowTitle("Add Event")
-        self.setGeometry(200, 200, 400, 350)  # Increased height
+        self.setGeometry(200, 200, 400, 350) 
 
+        # Create a layout for the dialog
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # Create widgets for event details
         self.event_name_edit = QLineEdit()
         self.start_time_edit = QLineEdit()
         self.end_time_edit = QLineEdit()
-        self.description_edit = QPlainTextEdit()  # Use QPlainTextEdit for description
+        self.description_edit = QPlainTextEdit()
         self.color_button = QColorButton()
         self.days_checkboxes = []
 
+        # Add widgets to the layout
         layout.addWidget(QLabel("Event Name:"))
         layout.addWidget(self.event_name_edit)
-        layout.addWidget(QLabel("Start Time (HH:MM):"))
+        layout.addWidget(QLabel("Start Time (H:MM):"))
         layout.addWidget(self.start_time_edit)
-        layout.addWidget(QLabel("End Time (HH:MM):"))
+        layout.addWidget(QLabel("End Time (H:MM):"))
         layout.addWidget(self.end_time_edit)
         layout.addWidget(QLabel("Description:"))
         layout.addWidget(self.description_edit)
@@ -40,8 +47,8 @@ class AddEventWindow(QDialog):
 
         button_layout = QHBoxLayout()
         self.add_button = QPushButton("Add")
-        self.delete_button = QPushButton("Delete")
         self.cancel_button = QPushButton("Cancel")
+        self.delete_button = QPushButton("Delete")
         self.add_button.clicked.connect(self.add_event)
         self.delete_button.clicked.connect(self.delete_event)
         self.cancel_button.clicked.connect(self.reject)
@@ -75,7 +82,6 @@ class AddEventWindow(QDialog):
         for checkbox in self.days_checkboxes:
             checkbox.setChecked(checkbox.text() in selected_days)
 
-
     def add_days_checkboxes(self):
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         for day in days:
@@ -87,7 +93,7 @@ class AddEventWindow(QDialog):
         event_name = self.event_name_edit.text()
         start_time = self.start_time_edit.text()
         end_time = self.end_time_edit.text()
-        description = self.description_edit.toPlainText()  # Get description text
+        description = self.description_edit.toPlainText()
         color = self.color_button.color
         selected_days = [checkbox.text() for checkbox in self.days_checkboxes if checkbox.isChecked()]
 
@@ -107,25 +113,45 @@ class AddEventWindow(QDialog):
         if not end_item:
             self.showError("End time does not exist in the time slots.")
             return
+        
+        if not selected_days:
+            self.showError("Select at least one day for the event.")
+            return
 
         start_row_index = start_item[0].row()
         end_row_index = end_item[0].row()
 
+        # Inside the loop for each day
         for day in selected_days:
             column_index = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].index(day) + 1
             for row in range(start_row_index, end_row_index + 1):
                 # Ensure that vertical header items are set for each row
                 start_item = self.viewer.tableWidget.verticalHeaderItem(row)
-                item = QTableWidgetItem(event_name + " (" + start_time + " - " + end_time + ")")
-                if description:
-                    item.setToolTip(description)
+                if not start_item:  # If vertical header item for start time doesn't exist, create one
+                    start_item = QTableWidgetItem(start_time)
+                    self.viewer.tableWidget.setVerticalHeaderItem(row, start_item)
+                end_item = self.viewer.tableWidget.verticalHeaderItem(row + (end_row_index - start_row_index))
+                if not end_item:  # If vertical header item for end time doesn't exist, create one
+                    end_item = QTableWidgetItem(end_time)
+                    self.viewer.tableWidget.setVerticalHeaderItem(row + (end_row_index - start_row_index), end_item)
+                    
+                # Puts event name on specific cells
+                item = QTableWidgetItem(event_name)
                 item.setBackground(color)
                 item.setTextAlignment(Qt.AlignTop)
+
+                tooltip = "Start Time: {}\nEnd Time: {}\nDescription: {}".format(start_time, end_time, description)
+                item.setToolTip(tooltip)
+
+                # Merges the cells on the grid based on the start and end time
                 self.viewer.tableWidget.setItem(row, column_index, item)
                 if row == start_row_index:
                     self.viewer.tableWidget.setSpan(row, column_index, end_row_index - start_row_index + 1, 1)
 
         self.accept()
+
+
+
 
     def delete_event(self):
         # Get the selected days for the event
@@ -184,37 +210,44 @@ class AddEventWindow(QDialog):
             return False
         
     def save_event(self):
-        
         # Retrieve updated event details from the UI
         event_name = self.event_name_edit.text()
         start_time = self.start_time_edit.text()
         end_time = self.end_time_edit.text()
-        description = self.description_edit.toPlainText()
-        color = self.color_button.color
+        # Color was grabbed in a different way
         selected_days = [checkbox.text() for checkbox in self.days_checkboxes if checkbox.isChecked()]
 
-        event_details = {
-            "name": event_name,
-            "start": start_time,
-            "end": end_time,
-            "description": description,
-            "color": color,
-            "selected_days": selected_days
-        }
+        # Ensure event name, start time, and end time are not empty
+        if not event_name or not start_time or not end_time:
+            self.showError("Event Name, Start Time, and End Time are required.")
+            return
 
+        # Check if start time and end time are in valid format
+        if not self.isValidTime(start_time) or not self.isValidTime(end_time):
+            self.showError("Invalid time format. Please enter time in HH:MM format.")
+            return
+
+        # Retrieve the selected days and check if any day is selected
+        if not selected_days:
+            self.showError("Select at least one day for the event.")
+            return
+
+        # Find items corresponding to the start and end time in the table
         start_item = self.viewer.tableWidget.findItems(start_time, Qt.MatchExactly)
-        if not start_item:
-            self.showError("Start time does not exist in the time slots.")
-            return
-
         end_item = self.viewer.tableWidget.findItems(end_time, Qt.MatchExactly)
-        if not end_item:
-            self.showError("End time does not exist in the time slots.")
-            return
-        
-        
-        
-        self.viewer.update_event_cells(event_details, start_item, end_item)
 
+        # Ensure start and end time slots exist in the schedule
+        if not start_item or not end_item:
+            self.showError("Start or End time does not exist in the time slots.")
+            return
+
+        # Set the description variable
+        self.description = self.description_edit.toPlainText()
+
+        # Call the existing method to add the event to the schedule
+        self.add_event()
         # Close the dialog
         self.close()
+
+    def get_description(self):
+        return self.description
