@@ -114,8 +114,6 @@ class AddEventWindow(QDialog):
         
         self.close()
 
-
-
     def validate_inputs(self):
         event_name = self.event_name_edit.text()
         start_time = self.start_time_edit.text() + " " + self.start_am_pm.currentText()
@@ -195,7 +193,8 @@ class AddEventWindow(QDialog):
         previous_selected_days = previous_event_details["selected_days"]
         previous_start_time = previous_event_details["start"]
         previous_end_time = previous_event_details["end"]
-
+        print(previous_selected_days)
+        print(selected_days)
         self.delete_previous_event(previous_selected_days, previous_start_time, previous_end_time)
 
         self.description = self.description_edit.toPlainText()
@@ -240,10 +239,15 @@ class AddEventWindow(QDialog):
             self.show_error("Start or End time does not exist in the time slots.")
 
     def delete_previous_event(self, selected_days, start_time, end_time):
-        print("Deleting previous event")
-        start_item = self.viewer.tableWidget.findItems(start_time, Qt.MatchExactly)
+        if start_time.split(" ")[0].split(":")[1] == "0":
+            start_item = self.viewer.tableWidget.findItems(start_time.split(" ")[0].split(":")[0] + ":00", Qt.MatchExactly)
+        else:
+            start_item = self.viewer.tableWidget.findItems(start_time, Qt.MatchExactly)     
+
+        print(start_item)   
 
         if start_item:
+            print("Start item found")
             start_row_index = start_item[0].row()
             duration_rows = self.calculate_duration_rows(start_time, end_time)
             for day in selected_days:
@@ -255,8 +259,6 @@ class AddEventWindow(QDialog):
                         self.viewer.tableWidget.setItem(row, column_index, QTableWidgetItem())  # Clear cell content
 
                 self.viewer.tableWidget.setSpan(start_row_index, column_index, 1, 1)  # Remove span
-
-
         else:
             self.show_error("Previous event not found in the schedule.")
 
@@ -279,13 +281,16 @@ class AddEventWindow(QDialog):
         if end_time_parts[1] == 'PM' and end_time_hour != 12:
             end_time_hour += 12
 
+        if start_time_parts[1] == 'AM' and start_time_hour == 12:
+            start_time_hour = 0
+
         # Calculate the start and end row indices
         start_row = start_time_hour * 4 + start_time_minute // 15
         end_row = end_time_hour * 4 + end_time_minute // 15
 
         # Calculate duration rows
-        duration_rows = start_row - end_row + 1
-
+        duration_rows = end_row - start_row + 1
+        print(duration_rows)
         return duration_rows
 
 
