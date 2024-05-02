@@ -22,6 +22,35 @@ def get_day_of_week(date):
     return date_obj.weekday()
 
 
+def do_recurring_tasks_collide( task1: RecurringTask, task2: RecurringTask):
+    num_daily = 0 # how many tasks occur daily. if both are daily, then 2. if only one is daily, and other is weekly, then num_daily = 1
+    if task1.frequency == 1:
+        num_daily+=1
+    if task2.frequency == 1:
+        num_daily+=1
+
+    if num_daily == 0:  # weekly and weekly
+        start_date_obj_1 = get_datetime_from_date(task1.start_date)
+        start_date_obj_2 = get_datetime_from_date(task2.start_date)
+        days_difference = abs((start_date_obj_2 - start_date_obj_1).days)
+
+        if days_difference % 7 == 0:  # if these two occur on the same weekday
+            latest_start_date = max(task1.start_date, task2.start_date)
+            earliest_end_date = min(task1.end_date, task2.end_date)
+            return latest_start_date <= earliest_end_date
+        else:
+            return False
+
+    elif num_daily == 1:
+        if task1.frequency != 1:  # i want task1 to be the one thats daily. if its task2, then swap them.
+            task1, task2 = task2, task1
+        
+
+    elif num_daily == 2:
+        pass
+    
+
+
 class Model:
     def __init__(self):
         self.recurring_tasks: list[RecurringTask] = []
@@ -31,7 +60,7 @@ class Model:
     def add_recurring_task(self, task: RecurringTask):
         """Attempts to create the recurring task. Returns True if it fits the schedule, or False otherwise"""
         for existing_task in self.recurring_tasks:
-            if (any([task.week_days[i] and existing_task.week_days[i] for i in range(7)]) and   # check days of the week
+            if ((task.frequency == 1 or existing_task.frequency == 1 or   # check if they land on the same day of the week
                     do_dates_overlap(task.start_date, task.end_date, existing_task.start_date, existing_task.end_date) and    # check the actual start and end date
                     do_times_overlap(task.start_time, task.duration, existing_task.start_time, existing_task.duration)):      # check the time of the events during the day
                 raise ValueError("New task overlaps with an existing task")
