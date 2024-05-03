@@ -23,6 +23,8 @@ class RecurringTask(Task):
         self.end_date = end_date
         self.frequency = frequency
         self.anti_tasks = []
+
+    # Adds an anti-task to this Recurring Task's list of anti-tasks (not utilized yet)
     def add_anti_task(self, anti_task):
         self.anti_tasks.append(anti_task)
         # check to see if end_date is after last week day ... ?
@@ -31,7 +33,13 @@ class TransientTask(Task):
     pass
 
 class AntiTask(Task):
-    pass
+    def __init__(self, name: str, task_type: str, start_date: int, start_time: float, duration: float): 
+        super().__init__(name, task_type, start_date, start_time, duration)
+        self.task_reference = None
+
+    # Assigns this anti-task to a specific recurring task (not utilized yet)
+    def reference_task(self, task: RecurringTask):
+        self.task_reference = task
 
 
 # Represents a single event that will be displayed on the calendar. Similar, but not the same as Task, because tasks may repeat (recurring tasks), or be negations like the anti taks
