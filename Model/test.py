@@ -89,4 +89,4 @@ def do_recurring_tasks_collide( task1: RecurringTask, task2: RecurringTask):
 t1 = RecurringTask("Task one", "...", 20240510, 0, 0.25, 20240510, 1)
 t2 = RecurringTask("Task two", "...", 20240509, 0, 0.25, 202405028, 1)
 
-print(do_recurring_tasks_collide(t1, t2))
+print(do_recurring_tasks_share_common_day(t1, t2))
