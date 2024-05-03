@@ -1,5 +1,5 @@
-
-
+# Parent Task class
+# All tasks have a name, a type, a start date and time, and a duration
 class Task:
     def __init__(self, name: str, task_type: str, start_date: int, start_time: float, duration: float):
         self.name = name
@@ -22,7 +22,7 @@ class RecurringTask(Task):
         super().__init__(name, task_type, start_date, start_time, duration)
         self.end_date = end_date
         self.frequency = frequency
-        self.anti_tasks = []
+        self.anti_tasks: list[AntiTask] = []
 
     # Adds an anti-task to this Recurring Task's list of anti-tasks (not utilized yet)
     def add_anti_task(self, anti_task):
