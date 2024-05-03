@@ -9,6 +9,11 @@ def check_overlap(task1: Task, task2: Task):
         return transient_datetimes_overlap(task1, task2)
     elif type(task1) is RecurringTask and type(task2) is RecurringTask:
         return recurring_tasks_overlap(task1, task2)
+    elif type(task1) is RecurringTask and type(task2) is TransientTask:
+        return diff_tasks_overlap(task1, task2)
+    else:
+        return diff_tasks_overlap(task2, task1)
+
 
 # compare two transient tasks and return True if they overlap
 def transient_datetimes_overlap(task1: TransientTask, task2: TransientTask):
@@ -22,14 +27,15 @@ def transient_datetimes_overlap(task1: TransientTask, task2: TransientTask):
         return False
     else:
         return True
-    
+
+
+# compare two recurring tasks and return True if they overlap
 def recurring_tasks_overlap(task1: RecurringTask, task2: RecurringTask):
 
     # start datetime & end datetime for the first instance of the task
     task1_start = get_datetime_from_datetime(task1.start_date, task1.start_time)
     task1_start_end = get_datetime_from_dur(task1_start, task1.duration)
     task1_weekday = task1_start.weekday
-    task1_end_weekday = task1_start_end.weekday
 
     # start datetime & end datetime for the last instance of the task
     if task1.frequency == 1:
@@ -39,7 +45,7 @@ def recurring_tasks_overlap(task1: RecurringTask, task2: RecurringTask):
         task1_end_date = get_datetime_from_datetime(task1.end_date, task1.start_time)
         
         # decrement end_date datetime by a day until it's the correct weekday
-        while (task1_end_date.weekday > task1_weekday):
+        while (task1_end_date.weekday != task1_weekday):
             task1_end_date -= timedelta(days=1)
         task1_end_date_end = get_datetime_from_dur(task1_end_date, task1.duration)
 
@@ -47,14 +53,13 @@ def recurring_tasks_overlap(task1: RecurringTask, task2: RecurringTask):
     task2_start = get_datetime_from_datetime(task2.start_date, task2.start_time)
     task2_start_end = get_datetime_from_dur(task2_start, task2.duration)
     task2_weekday = task2_start.weekday
-    task2_end_weekday = task2_start_end.weekday
 
     if task2.frequency == 1:
         task2_end_date = get_datetime_from_datetime(task2.end_date, task2.start_time)
         task2_end_date_end = get_datetime_from_dur(task2_end_date, task2.duration)
     elif task2.frequency == 7:
         task2_end_date = get_datetime_from_datetime(task2.end_date, task2.start_time)
-        while (task2_end_date.weekday > task2_weekday):
+        while (task2_end_date.weekday != task2_weekday):
             task2_end_date -= timedelta(days=1)
         task2_end_date_end = get_datetime_from_dur(task2_end_date, task2.duration)
 
@@ -62,22 +67,101 @@ def recurring_tasks_overlap(task1: RecurringTask, task2: RecurringTask):
     if task1_end_date_end <= task2_start or task1_start >= task2_end_date_end:
         return False
     
-    """    
-    # THE FOLLOWING CODE IN THIS METHOD DOES NOT LOGICALLY WORK YET I AM TOO TIRED TO CONTINUE TODAY
-    # if they both repeat weekly and their times never overlap, return false
-    elif task1.frequency == 7 and task2.frequency == 7:
-        # if their weekdays never overlap, return false
-        if task1_end_weekday < task2_weekday or task1_weekday > task2_end_weekday:
+    # handle comparison for daily tasks
+    elif task1.frequency == 1 and task2.frequency == 1:
+        # assume matching dates to make accounting for tasks that span multiple days easier
+        task1_start_modified = modify_date(task1_start, task2_start)
+        task1_start_end_modified = get_datetime_from_dur(task1_start_modified, task1.duration)
+        # if times never overlap, return False
+        if task1_start_end_modified <= task2_start or task1_start_modified >= task2_start_end:
             return False
-        # if weekkdays do overlap but their times never do, 
-        elif (task1_start_end.time <= task2_start.time and task1_end_weekday <= task2_weekday) or (task1_start.time >= task2_start_end.time and task1_weekday >= task2_end_weekday):
+        
+    # handle comparison for weekly tasks
+    elif task1.frequency == 7 and task2.frequency == 7:
+        # preserve starting weekday of task 1, assume matching week to make accounting for tasks that span multiple days easier
+        task1_start_modified = modify_week(task1_start, task2_start)
+        task1_start_end_modified = get_datetime_from_dur(task1_start_modified, task1.duration)
+        # if times never overlap, return False
+        if task1_start_end_modified <= task2_start or task1_start_modified >= task2_start_end:
             return False
 
-    # if either task repeats daily and their times never overlap, return false    
+    # handle comparison for daily/weekly tasks 
     else:
-        if task1_start_end.time <= task2_start.time or task1_start.time >= task2_start_end.time:
+        # check for cases where the daily task only exists for a short period in between two instances of the weekly task, return False
+        if task1.frequency == 1 and task2.frequency == 7:
+            if task1_start > task2_start_end and task1_end_date_end < task2_end_date:
+                return False
+        else:
+            if task2_start > task1_start_end and task2_end_date_end < task1_end_date:
+                return False
+            
+        # assume matching dates to make accounting for tasks that span multiple days easier
+        task1_start_modified = modify_date(task1_start, task2_start)
+        task1_start_end_modified = get_datetime_from_dur(task1_start_modified, task1.duration)
+        # if times never overlap, return False
+        if task1_start_end_modified <= task2_start or task1_start_modified >= task2_start_end:
             return False
-    """
+        
+    # default to return True
+    return True
+
+
+# compare one transient and one recurring task
+def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
+
+    # start datetime & end datetime for the first instance of the recurring task
+    rec_start = get_datetime_from_datetime(rectask.start_date, rectask.start_time)
+    rec_start_end = get_datetime_from_dur(rec_start, rectask.duration)
+    rec_weekday = rec_start.weekday
+
+    # start datetime & end datetime for the last instance of the recurring task
+    if rectask.frequency == 1:
+        rec_end_date = get_datetime_from_datetime(rectask.end_date, rectask.start_time)
+        rec_end_date_end = get_datetime_from_dur(rec_end_date, rectask.duration)
+    elif rectask.frequency == 7:
+        rec_end_date = get_datetime_from_datetime(rectask.end_date, rectask.start_time)
+        
+        # decrement end_date datetime by a day until it's the correct weekday
+        while (rec_end_date.weekday != rec_weekday):
+            rec_end_date -= timedelta(days=1)
+        rec_end_date_end = get_datetime_from_dur(rec_end_date, rectask.duration)
+    
+    # start and end datetimes for transient task
+    tra_start = get_datetime_from_datetime(tratask.start_date, tratask.start_time)
+    tra_end = get_datetime_from_dur(tra_start, tratask.duration)
+
+    return True
+
+
+# output new datetime with time of datetime1 and date of datetime2
+def modify_date(datetime1: datetime, datetime2: datetime):
+    # Extract the time part from datetime1
+    time_part = datetime1.time()
+    
+    # Extract the date part from datetime2
+    date_part = datetime2.date()
+    
+    # Combine date part from datetime2 and time part from datetime1
+    new_datetime = datetime.combine(date_part, time_part)
+    
+    return new_datetime
+
+
+# output new datetime with the time and weekday of datetime1 and the date of datetime2
+def modify_week(datetime1, datetime2):
+    # Extract the time part from datetime1
+    time_part = datetime1.time()
+    
+    # Extract the date part from datetime2
+    date_part = datetime2.date()
+
+    weekday_dif = datetime1.weekday - datetime2.weekday
+    
+    # Combine date part from datetime2 and time part from datetime1
+    new_datetime = datetime.combine(date_part, time_part)
+    new_datetime += timedelta(days=weekday_dif)
+    
+    return new_datetime
 
 
 
@@ -112,7 +196,7 @@ def can_apply_anti_task(atask: AntiTask, rectask: RecurringTask):
         if atask_day == rectask_day:
             if atask_start >= rectask_start and atask_start <= rectask_end:
                 if atask.start_time == rectask.start_time and atask.duration == rectask.duration:
-                   
+                    
                     # return False if identical anti-task exists
                     for existing_atask in rectask.anti_tasks:
                         if existing_atask.start_date == atask.start_date:
@@ -174,21 +258,6 @@ class Model:
 
         self.tasks.append(task)
         return True
-   
-    """
-
-    def do_recurring_and_transient_tasks_collide(self, recurring_task: RecurringTask, transient_task: TransientTask):
-        if (recurring_task.start_date <= transient_task.start_date <= recurring_task.end_date and  # if transient task is within the dates of the recurring task
-                recurring_task.week_days[get_day_of_week(transient_task.start_date)] == True and  # if the transient task lands on a weekday that the recurring task is scheduled for
-                do_times_overlap(transient_task.start_time, transient_task.duration, recurring_task.start_time, recurring_task.duration)):      # check the time of the events during the day
-            # if they seem to collide, check to see if theres an anti task that frees this spot
-            for anti_task in self.anti_tasks:
-                if (anti_task.start_date == transient_task.start_date and # if transient task and anti task are on the same date, AND if transient task is within the anti task's time
-                        transient_task.start_time >= anti_task.start_time and transient_task.start_time + transient_task.duration <= anti_task.start_time + anti_task.duration):
-                    return False
-            return True # True if no suitable anti task is found
-        
-        return False # False if no recurring task collides with transient task"""
 
     # assign anti_task to a specific instance of a recurring task, returns false 
     def add_anti_task(self, anti_task: AntiTask): 
