@@ -1,2 +1,4 @@
 
 /.vscode
+/Viewer/__pycache__/*
+
