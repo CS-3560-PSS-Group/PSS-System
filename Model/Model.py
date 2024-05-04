@@ -163,9 +163,12 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
         for existing_atask in rectask.anti_tasks:
             atask_start = get_datetime_from_datetime(existing_atask.start_date, existing_atask.start_time)
             atask_end = get_datetime_from_dur(atask_start, existing_atask.duration)
-            atask_end -= timedelta(days=1)
-            atask_start += timedelta(days=1)
-
+            new_left_start = atask_start - timedelta(days=1)
+            new_left_end = atask_end - timedelta(days=1)
+            new_right_start = atask_start + timedelta(days=1)
+            new_right_end = atask_end + timedelta(days=1)
+            new_start_date = int(new_right_start.strftime("%Y%m%d"))
+            new_end_date = int(new_left_end.strftime("%Y%m%d"))
             # default to ASSUME NO OVERLAP for this recursion to work:
             # i.e. in the case where only anti-task is the first instance and no left side can be created
             # and there is no overlap with the right side, that should return false
@@ -173,23 +176,23 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
             right_overlap = False
             
             # recursively call this function on the left side of the split
-            new_end_date = atask_end.strftime("%Y%m%d")
-            if new_end_date > rectask.start_date:
+            if new_left_start > rec_start_end:
                 # create new RecurringTask object
                 left_rec_task = RecurringTask(rectask.name, rectask.task_type, rectask.start_date, rectask.start_time, rectask.duration, new_end_date, rectask.frequency)
                 # propogate with applicable anti-tasks from parent objects
                 for atask in rectask.anti_tasks:
-                    left_rec_task.add_anti_task(atask)
+                    if atask.start_date <= left_rec_task.end_date:
+                        left_rec_task.add_anti_task(atask)
                 left_overlap = diff_tasks_overlap(left_rec_task, tratask)
                
             # recursively call this function on the right side of the split
-            new_start_date = atask_start.strftime("%Y%m%d")
-            if new_start_date < rectask.end_date:
+            if new_right_end < rec_end_date:
                 # create new RecurringTask object
                 right_rec_task = RecurringTask(rectask.name, rectask.task_type, new_start_date, rectask.start_time, rectask.duration, rectask.end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
-                for atask in rectask.antitasks:
-                    right_rec_task.add_anti_task(atask)
+                for atask in rectask.anti_tasks:
+                    if atask.start_date >= right_rec_task.start_date:
+                        right_rec_task.add_anti_task(atask)
                 right_overlap = diff_tasks_overlap(right_rec_task, tratask)
 
             # if no overlap with either side of the split, return False
@@ -216,10 +219,12 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
         for existing_atask in rectask.anti_tasks:
             atask_start = get_datetime_from_datetime(existing_atask.start_date, existing_atask.start_time)
             atask_end = get_datetime_from_dur(atask_start, existing_atask.duration)
-            atask_end -= timedelta(days=7)
-            atask_start += timedelta(days=7)
-            new_end_date = int(atask_end.strftime("%Y%m%d"))
-            new_start_date = int(atask_start.strftime("%Y%m%d"))
+            new_left_start = atask_start - timedelta(days=7)
+            new_left_end = atask_end - timedelta(days=7)
+            new_right_start = atask_start + timedelta(days=7)
+            new_right_end = atask_end + timedelta(days=7)
+            new_start_date = int(new_right_start.strftime("%Y%m%d"))
+            new_end_date = int(new_left_end.strftime("%Y%m%d"))
 
             # default to ASSUME NO OVERLAP for this recursion to work:
             # i.e. in the case where only anti-task is the first instance and no left side can be created
@@ -228,21 +233,23 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
             right_overlap = False
             
             # recursively call this function on the left side of the split
-            if new_end_date > rectask.start_date:
+            if new_left_start > rec_start_end:
                 # create new RecurringTask object
                 left_rec_task = RecurringTask(rectask.name, rectask.task_type, rectask.start_date, rectask.start_time, rectask.duration, new_end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
                 for atask in rectask.anti_tasks:
-                    left_rec_task.add_anti_task(atask)
+                    if atask.start_date <= left_rec_task.end_date:
+                        left_rec_task.add_anti_task(atask)
                 left_overlap = diff_tasks_overlap(left_rec_task, tratask)
                
             # recursively call this function on the right side of the split
-            if new_start_date < rectask.end_date:
+            if new_right_end < rec_end_date:
                 # create new RecurringTask object
                 right_rec_task = RecurringTask(rectask.name, rectask.task_type, new_start_date, rectask.start_time, rectask.duration, rectask.end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
                 for atask in rectask.antitasks:
-                    right_rec_task.add_anti_task(atask)
+                    if atask.start_date >= right_rec_task.start_date:
+                        right_rec_task.add_anti_task(atask)
                 right_overlap = diff_tasks_overlap(right_rec_task, tratask)
 
             # if no overlap with either side of the split, return False

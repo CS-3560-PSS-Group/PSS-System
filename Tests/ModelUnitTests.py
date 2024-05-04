@@ -80,5 +80,66 @@ class TestModel(unittest.TestCase):
         test_model.add_task(test_task1)
         self.assertRaises(ValueError, lambda: test_model.add_task(test_task2))
 
+    def test_recurring_and_transient(self):
+        test_model = Model()
+        test_task1 = TransientTask("test", "test", 20240517, 20.00, 1.00,)
+        test_task2 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_model.add_task(test_task1)
+        result = test_model.add_task(test_task2)
+        self.assertEqual(result, True, 'Adding recurring and transient tasks to model failed.')
+
+    def test_recurring_and_invalid_transient(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = TransientTask("test", "test", 20240514, 23.00, 20.00,)
+        test_model.add_task(test_task1)
+        self.assertRaises(ValueError, lambda: test_model.add_task(test_task2))
+
+    def test_recurring_and_valid_anti(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = AntiTask("test", "test", 20240517, 18.00, 1.00)
+        test_model.add_task(test_task1)
+        result = test_model.add_anti_task(test_task2)
+        self.assertEqual(result, True, 'Adding anti-task to instance of recurring task failed.')
+
+    def test_recurring_and_invalid_anti(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = AntiTask("test", "test", 20240517, 18.00, 1.50)
+        test_model.add_task(test_task1)
+        self.assertRaises(LookupError, lambda: test_model.add_anti_task(test_task2))
+
+    def test_recurring_anti_and_valid_transient(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = AntiTask("test", "test", 20240517, 18.00, 1.00)
+        test_task3 = TransientTask("test", "test", 20240517, 17.00, 3.00)
+        test_model.add_task(test_task1)
+        test_model.add_anti_task(test_task2)
+        result = test_model.add_task(test_task3)
+        self.assertEqual(result, True, 'Adding transient task over valid anti-task failed.')
+
+    def test_recurring_anti_and_invalid_transient(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = AntiTask("test", "test", 20240517, 18.00, 1.00)
+        test_task3 = TransientTask("test", "test", 20240516, 17.00, 3.00)
+        test_model.add_task(test_task1)
+        test_model.add_anti_task(test_task2)
+        self.assertRaises(ValueError, lambda: test_model.add_task(test_task3))
+
+    def test_recurring_two_anti_and_valid_transient(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
+        test_task2 = AntiTask("test", "test", 20240516, 18.00, 1.00)
+        test_task3 = AntiTask("test", "test", 20240515, 18.00, 1.00)
+        test_task3 = TransientTask("test", "test", 20240515, 17.00, 3.00)
+        test_model.add_task(test_task1)
+        test_model.add_anti_task(test_task2)
+        result = test_model.add_task(test_task3)
+        self.assertEqual(result, True, 'Adding transient task over valid anti-tasks failed.')
+
+
 if __name__ == '__main__':
     unittest.main()
