@@ -375,7 +375,7 @@ class Model:
         #A ttempts to create the task. Returns True if it fits the schedule, or False otherwise
         for existing_task in self.tasks:
             if check_overlap(existing_task, task):
-                raise ValueError('New task overlaps with an existing task')
+                raise ValueError('Task overlaps an existing task')
 
         self.tasks.append(task)
         return True
