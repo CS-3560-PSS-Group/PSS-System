@@ -163,10 +163,8 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
         for existing_atask in rectask.anti_tasks:
             atask_start = get_datetime_from_datetime(existing_atask.start_date, existing_atask.start_time)
             atask_end = get_datetime_from_dur(atask_start, existing_atask.duration)
-            new_left_start = atask_start - timedelta(days=1)
             new_left_end = atask_end - timedelta(days=1)
             new_right_start = atask_start + timedelta(days=1)
-            new_right_end = atask_end + timedelta(days=1)
             new_start_date = int(new_right_start.strftime("%Y%m%d"))
             new_end_date = int(new_left_end.strftime("%Y%m%d"))
             # default to ASSUME NO OVERLAP for this recursion to work:
@@ -176,7 +174,7 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
             right_overlap = False
             
             # recursively call this function on the left side of the split
-            if new_left_start > rec_start_end:
+            if new_end_date > rectask.start_date:
                 # create new RecurringTask object
                 left_rec_task = RecurringTask(rectask.name, rectask.task_type, rectask.start_date, rectask.start_time, rectask.duration, new_end_date, rectask.frequency)
                 # propogate with applicable anti-tasks from parent objects
@@ -184,9 +182,9 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
                     if atask.start_date <= left_rec_task.end_date:
                         left_rec_task.add_anti_task(atask)
                 left_overlap = diff_tasks_overlap(left_rec_task, tratask)
-               
+            
             # recursively call this function on the right side of the split
-            if new_right_end < rec_end_date:
+            if new_start_date < rectask.end_date:
                 # create new RecurringTask object
                 right_rec_task = RecurringTask(rectask.name, rectask.task_type, new_start_date, rectask.start_time, rectask.duration, rectask.end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
@@ -219,10 +217,8 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
         for existing_atask in rectask.anti_tasks:
             atask_start = get_datetime_from_datetime(existing_atask.start_date, existing_atask.start_time)
             atask_end = get_datetime_from_dur(atask_start, existing_atask.duration)
-            new_left_start = atask_start - timedelta(days=7)
             new_left_end = atask_end - timedelta(days=7)
             new_right_start = atask_start + timedelta(days=7)
-            new_right_end = atask_end + timedelta(days=7)
             new_start_date = int(new_right_start.strftime("%Y%m%d"))
             new_end_date = int(new_left_end.strftime("%Y%m%d"))
 
@@ -233,7 +229,7 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
             right_overlap = False
             
             # recursively call this function on the left side of the split
-            if new_left_start > rec_start_end:
+            if new_end_date > rectask.start_date:
                 # create new RecurringTask object
                 left_rec_task = RecurringTask(rectask.name, rectask.task_type, rectask.start_date, rectask.start_time, rectask.duration, new_end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
@@ -243,7 +239,7 @@ def diff_tasks_overlap(rectask: RecurringTask, tratask: TransientTask):
                 left_overlap = diff_tasks_overlap(left_rec_task, tratask)
                
             # recursively call this function on the right side of the split
-            if new_right_end < rec_end_date:
+            if new_start_date < rectask.end_date:
                 # create new RecurringTask object
                 right_rec_task = RecurringTask(rectask.name, rectask.task_type, new_start_date, rectask.start_time, rectask.duration, rectask.end_date, rectask.frequency)
                 # propogate with applicable antitasks from parent object
