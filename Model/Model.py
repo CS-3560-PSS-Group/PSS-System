@@ -361,6 +361,12 @@ def get_datetime_from_dur(start: datetime, dur: float):
     return start + time_dur
 
 
+# returns weekday from integer date
+def get_day_of_week(date):
+    date_obj = get_datetime_from_date(date)
+    return date_obj.weekday()
+
+
 class Model:
     def __init__(self):
         self.tasks: list[Task] = []

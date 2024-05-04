@@ -58,5 +58,12 @@ class TestModel(unittest.TestCase):
         result = test_model.add_task(test_task2)
         self.assertEqual(result, True, 'Adding daily recurring tasks to model failed.')
 
+    def test_two_invalid_recurring_weekly(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 20.00, 1.00, 20240615, 7)
+        test_task2 = RecurringTask("test", "test", 20240515, 19.50, 1.00, 20240615, 7)
+        test_model.add_task(test_task1)
+        self.assertRaises(ValueError, lambda: test_model.add_task(test_task2))
+
 if __name__ == '__main__':
     unittest.main()
