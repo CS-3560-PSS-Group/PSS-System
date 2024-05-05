@@ -119,25 +119,26 @@ class TestModel(unittest.TestCase):
         test_model.add_anti_task(test_task2)
         result = test_model.add_task(test_task3)
         self.assertEqual(result, True, 'Adding transient task over valid anti-task failed.')
-
+    
     def test_recurring_anti_and_invalid_transient(self):
         test_model = Model()
-        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
-        test_task2 = AntiTask("test", "test", 20240517, 18.00, 1.00)
-        test_task3 = TransientTask("test", "test", 20240516, 17.00, 3.00)
-        test_model.add_task(test_task1)
-        test_model.add_anti_task(test_task2)
-        self.assertRaises(ValueError, lambda: test_model.add_task(test_task3))
-
-    def test_recurring_two_anti_and_valid_transient(self):
-        test_model = Model()
-        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 1)
-        test_task2 = AntiTask("test", "test", 20240516, 18.00, 1.00)
-        test_task3 = AntiTask("test", "test", 20240515, 18.00, 1.00)
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 7)
+        test_task2 = AntiTask("test", "test", 20240522, 18.00, 1.00)
         test_task3 = TransientTask("test", "test", 20240515, 17.00, 3.00)
         test_model.add_task(test_task1)
         test_model.add_anti_task(test_task2)
-        result = test_model.add_task(test_task3)
+        self.assertRaises(ValueError, lambda: test_model.add_task(test_task3))
+    
+    def test_recurring_two_anti_and_valid_transient(self):
+        test_model = Model()
+        test_task1 = RecurringTask("test", "test", 20240515, 18.00, 1.00, 20240615, 7)
+        test_task2 = AntiTask("test", "test", 20240515, 18.00, 1.00)
+        test_task3 = AntiTask("test", "test", 20240522, 18.00, 1.00)
+        test_task4 = TransientTask("test", "test", 20240515, 17.00, 3.00)
+        test_model.add_task(test_task1)
+        test_model.add_anti_task(test_task2)
+        test_model.add_anti_task(test_task3)
+        result = test_model.add_task(test_task4)
         self.assertEqual(result, True, 'Adding transient task over valid anti-tasks failed.')
 
 
