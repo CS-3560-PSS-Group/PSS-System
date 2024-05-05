@@ -105,9 +105,21 @@ def recurring_tasks_overlap(task1: RecurringTask, task2: RecurringTask):
         # assume matching dates to make accounting for tasks that span multiple days easier
         task1_start_modified = modify_date(task1_start, task2_start)
         task1_start_end_modified = get_datetime_from_dur(task1_start_modified, task1.duration)
+
         # if times never overlap, return False
+        # we do this by checking if they overlap with the same start date, task1 starting the
+        # day before task 2, and task 1 starting the day after task 2
         if task1_start_end_modified <= task2_start or task1_start_modified >= task2_start_end:
-            return False
+
+            # Check if task 1 starts the day before and overlaps task 2
+            task1_start_mod_day_before = task1_start_modified - timedelta(days=1)
+            task1_start_end_mod_day_before = task1_start_end_modified - timedelta(days=1)
+            if task1_start_end_mod_day_before <= task2_start or task1_start_mod_day_before >= task2_start_end:
+                # Check if task 1 starts the day after and overlaps task 2
+                task1_start_mod_day_after = task1_start_modified + timedelta(days=1)
+                task1_start_end_mod_day_after = task1_start_end_modified + timedelta(days=1)
+                if task1_start_end_mod_day_after <= task2_start or task1_start_mod_day_after >= task2_start_end:
+                    return False
         
     # default to return True
     return True

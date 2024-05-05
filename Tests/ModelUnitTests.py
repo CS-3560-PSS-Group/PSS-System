@@ -75,8 +75,8 @@ class TestModel(unittest.TestCase):
 
     def test_weekly_and_daily_invalid(self):
         test_model = Model()
-        test_task1 = RecurringTask("test", "test", 20240515, 20.00, 1.00, 20240615, 7)
-        test_task2 = RecurringTask("test", "test", 20240515, 19.50, 1.00, 20240615, 1)
+        test_task1 = RecurringTask("test", "test", 20240509, 23.75, 1.00, 20240615, 7)
+        test_task2 = RecurringTask("test", "test", 20240510, 0, 0.5, 20240615, 1)
         test_model.add_task(test_task1)
         self.assertRaises(ValueError, lambda: test_model.add_task(test_task2))
 
