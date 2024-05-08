@@ -343,8 +343,18 @@ class Model:
         self.tasks: list[Task] = []
 
     def add_task(self, task: Task):
-        #A ttempts to create the task. Returns True if it fits the schedule, or False otherwise
+        # Attempts to create the task. Returns True if it fits the schedule, or False otherwise
         for existing_task in self.tasks:
+
+            # raise eror if same name as existing task or anti-task
+            if task.name == existing_task.name:
+                raise ValueError('Attempted to add task with duplicate name')
+            elif type(existing_task) is RecurringTask:
+                for atask in existing_task.anti_tasks:
+                    if task.name == atask.name:
+                        raise ValueError('Attempted to add task with duplicate name')
+                    
+            # raise error if overlaps with existing task
             if check_overlap(existing_task, task):
                 raise ValueError('Task overlaps an existing task')
 
@@ -365,33 +375,39 @@ class Model:
         raise LookupError('Error: AntiTask does not apply to any existing recurring task')
 
 
-    """
     def get_week_schedule(self, week_start_date):
-        events = []
-        for recurring_task in self.recurring_tasks:
-            if recurring_task.start_date <= week_start_date <= recurring_task.end_date: # if this recurring task applies to this week
-
-                for i in range(7): # for each day of the week
-                    if recurring_task.week_days[i] == True:
-                        e = Event(recurring_task.name, True, recurring_task.task_type, i, recurring_task.start_time, recurring_task.duration, 
-                                  "Started on " + recurring_task.start_date + " with " + (-1) + " iterations left")   # TODO  FIX THIS 
-                        events.append(e)
-                        
-        for anti_task in self.anti_tasks:
-            week_start_date_obj = get_datetime_from_date(week_start_date)
-            anti_task_start_date_obj = get_datetime_from_date(anti_task.start_date)
-            if 0 <= (anti_task_start_date_obj - week_start_date_obj).days <= 6:
-
-
-    def get_recurring_tasks():
         pass
+
     
-    def get_transient_tasks(): 
-        pass
+    # return list of RecurringTask objects in model
+    def get_recurring_tasks(self):
+        rec_list = list()
+        for task in self.tasks:
+            if type(task) is RecurringTask:
+                rec_list.append(task)
 
-    def get_anti_tasks():
-        pass
+        return rec_list
+    
 
-    def is_task_valid():
-        pass"""
+    # return list of TransientTask objects in model
+    def get_transient_tasks(self): 
+        tra_list = list()
+        for task in self.tasks:
+            if type(task) is TransientTask:
+                tra_list.append(task)
+
+        return tra_list
+
+
+    # return list of AntiTask objects in model
+    def get_anti_tasks(self):
+        rec_list = self.get_recurring_tasks()
+        at_list = list()
+
+        # iterate through all recurring tasks in model, add their AntiTasks to at_list
+        for task in rec_list:
+            for a_task in task.anti_tasks:
+                at_list.append(a_task)
+
+        return at_list
     
