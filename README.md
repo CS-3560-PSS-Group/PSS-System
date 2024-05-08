@@ -6,3 +6,7 @@ To run tests on a Unix-based machine:
 1. navigate to directory in terminal
 2. ```export PYTHONPATH=$(pwd)```
 
+On Windows machine:
+1. navigate to directory in powershell
+2. ```$env:PYTHONPATH = pwd```
+
