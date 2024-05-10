@@ -102,32 +102,19 @@ class Viewer(QWidget):
             selected_day = self.tableWidget.horizontalHeaderItem(column).text()
             description = item.toolTip()
 
-            # Include start and end dates
-            start_date = add_event_window.beginning_date_edit.date().toString(Qt.ISODate)
-            end_date = add_event_window.ending_date_edit.date().toString(Qt.ISODate)
-
-            # Include recurring and transient checkbox states
-            is_recurring = add_event_window.recurring_checkbox.isChecked()
-            is_transient = add_event_window.transient_checkbox.isChecked()
-
             event_details = {
                 "name": event_name,
                 "start": start_time,
                 "end": end_time,
                 "description": description,
                 "color": color,
-                "selected_days": [selected_day],
-                "start_date": start_date,
-                "end_date": end_date,
-                "is_recurring": is_recurring,
-                "is_transient": is_transient
+                "selected_days": [selected_day]
             }
 
             add_event_window = AddEventWindow(self, event_details)
             add_event_window.exec_()
 
-<<<<<<< HEAD
-def export_schedule(self):
+    def export_schedule(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
         if file_name:
             # Write the schedule to the file
@@ -147,6 +134,7 @@ def export_schedule(self):
     def write_schedule_dialog(self):
         dialog = WriteScheduleDialog(self)
         dialog.exec_()
+
 class WriteScheduleDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -194,6 +182,3 @@ if __name__ == '__main__':
     viewer = Viewer()
     viewer.show()
     sys.exit(app.exec_())
-=======
-
->>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
