@@ -1,11 +1,18 @@
 from datetime import datetime
+<<<<<<< HEAD
 from PyQt5.QtWidgets import QMessageBox
 
+=======
+>>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QLineEdit, QHeaderView, QLabel, QComboBox, QHBoxLayout,
     QDialog, QCheckBox, QColorDialog, QPlainTextEdit, QErrorMessage, QDateEdit,
+<<<<<<< HEAD
     QMessageBox, QCalendarWidget
+=======
+    QMessageBox, QCalendarWidget, QFileDialog
+>>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
 )
 from PyQt5.QtCore import Qt, QDate
 from Viewer.QColorButton import QColorButton
@@ -21,11 +28,22 @@ class AddEventWindow(QDialog):
         self.setWindowTitle("Add Event")
         self.setGeometry(200, 200, 400, 350)
 
+        self.file_name = self.get_file_name()
+
         self.create_widgets()
         self.setup_layout()
         self.populate_event_details(event_details)
     
 
+    def get_file_name(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt)", options=options)
+        if file_name:
+            return file_name
+        else:
+            return None
+        
     def create_widgets(self):
         self.event_name_edit = QLineEdit()
         self.start_time_edit = QLineEdit()
@@ -41,6 +59,13 @@ class AddEventWindow(QDialog):
         ]
         self.days_label = QLabel("Select Days:")
 
+<<<<<<< HEAD
+=======
+        self.search_input = QLineEdit()
+        self.search_button = QPushButton("Search")  # Button to trigger the search
+        self.search_button.clicked.connect(self.search_task)  # Connect search_button click event to search_task method
+
+>>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
         self.start_am_pm = QComboBox()
         self.start_am_pm.addItems(["AM", "PM"])
         self.end_am_pm = QComboBox()
@@ -91,6 +116,15 @@ class AddEventWindow(QDialog):
             self.days_layout.addWidget(checkbox)
             checkbox.hide()  # Initially hide all day checkboxes
 
+<<<<<<< HEAD
+=======
+        layout.addWidget(QLabel("Search Task by Name:"))
+        search_layout = QHBoxLayout()
+        search_layout.addWidget(self.search_input)
+        search_layout.addWidget(self.search_button)
+        layout.addLayout(search_layout)
+
+>>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
         date_layout = QHBoxLayout()
         date_layout.addWidget(QLabel("Beginning Date:"))
         date_layout.addWidget(self.beginning_date_edit)
@@ -228,4 +262,25 @@ class AddEventWindow(QDialog):
             # Show the days checkboxes
             for checkbox in self.days_checkboxes:
                 checkbox.show()
+<<<<<<< HEAD
             self.days_label.show()
+=======
+            self.days_label.show()
+
+    def search_task(self):
+        task_name = self.search_input.text()
+        if not task_name:
+            QMessageBox.warning(self, "Error", "Please enter a task name to search.")
+            return
+        # Implement the logic to search for the task by name and display its information if found
+        # You can use the viewer to access the schedule data and search for the task by name
+        # Display the information using QMessageBox or any other appropriate widget
+
+# You can test this by creating an instance of AddEventWindow and running the application
+if __name__ == "__main__":
+    import sys
+    app = QApplication(sys.argv)
+    window = AddEventWindow(None)
+    window.show()
+    sys.exit(app.exec_())
+>>>>>>> f8a2d9b2c8eea207e073b0768a8e9d3a33bd859f
