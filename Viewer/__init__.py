@@ -68,14 +68,28 @@ class Viewer(QWidget):
             selected_day = self.tableWidget.horizontalHeaderItem(column).text()
             description = item.toolTip()
 
+            # Include start and end dates
+            start_date = add_event_window.beginning_date_edit.date().toString(Qt.ISODate)
+            end_date = add_event_window.ending_date_edit.date().toString(Qt.ISODate)
+
+            # Include recurring and transient checkbox states
+            is_recurring = add_event_window.recurring_checkbox.isChecked()
+            is_transient = add_event_window.transient_checkbox.isChecked()
+
             event_details = {
                 "name": event_name,
                 "start": start_time,
                 "end": end_time,
                 "description": description,
                 "color": color,
-                "selected_days": [selected_day]
+                "selected_days": [selected_day],
+                "start_date": start_date,
+                "end_date": end_date,
+                "is_recurring": is_recurring,
+                "is_transient": is_transient
             }
 
             add_event_window = AddEventWindow(self, event_details)
             add_event_window.exec_()
+
+
