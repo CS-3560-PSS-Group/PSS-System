@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QHeaderView
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
+    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox
 )
 from PyQt5.QtCore import Qt
 from Viewer.AddEventWindow import AddEventWindow
-
+import json
+from datetime import datetime
 
 class Viewer(QWidget):
     def __init__(self):
@@ -18,13 +19,37 @@ class Viewer(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        self.create_search_layout(layout)
         self.create_table_widget(layout)
 
         self.add_event_button = QPushButton("Add Event")
         self.add_event_button.clicked.connect(self.open_add_event_window)
         layout.addWidget(self.add_event_button)
 
+        self.export_button = QPushButton("Export Schedule")
+        self.export_button.clicked.connect(self.export_schedule)
+        layout.addWidget(self.export_button)
+
+        self.load_button = QPushButton("Load Schedule")
+        self.load_button.clicked.connect(self.load_schedule)
+        layout.addWidget(self.load_button)
+
+        self.write_button = QPushButton("Write Schedule")
+        self.write_button.clicked.connect(self.write_schedule_dialog)
+        layout.addWidget(self.write_button)
+
         self.tableWidget.cellClicked.connect(self.edit_event_details)
+
+    def create_search_layout(self, parent_layout):
+        search_layout = QHBoxLayout()
+        parent_layout.addLayout(search_layout)
+
+        self.search_input = QLineEdit()
+        search_layout.addWidget(self.search_input)
+
+        self.search_button = QPushButton("Search")
+        self.search_button.clicked.connect(self.search_task)
+        search_layout.addWidget(self.search_button)
 
     def create_table_widget(self, layout):
         self.tableWidget = QTableWidget()
@@ -55,6 +80,15 @@ class Viewer(QWidget):
         add_event_window = AddEventWindow(self)
         add_event_window.exec_()
 
+    def search_task(self):
+        task_name = self.search_input.text()
+        if not task_name:
+            QMessageBox.warning(self, "Error", "Please enter a task name to search.")
+            return
+        # Implement the logic to search for the task by name and display its information if found
+        # You can use the viewer to access the schedule data and search for the task by name
+        # Display the information using QMessageBox or any other appropriate widget
+
     def edit_event_details(self, row, column):
         item = self.tableWidget.item(row, column)
 
@@ -79,3 +113,72 @@ class Viewer(QWidget):
 
             add_event_window = AddEventWindow(self, event_details)
             add_event_window.exec_()
+
+    def export_schedule(self):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
+        if file_name:
+            # Write the schedule to the file
+            with open(file_name, 'w') as file:
+                # Write the schedule content here
+                pass  # Placeholder for actual writing logic
+
+    def load_schedule(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Load Schedule", "", "JSON Files (*.json)")
+        if file_name:
+            # Load the schedule from the JSON file
+            with open(file_name, 'r') as file:
+                schedule_data = json.load(file)
+                # Process the loaded schedule data
+                pass  # Placeholder for actual processing logic
+
+    def write_schedule_dialog(self):
+        dialog = WriteScheduleDialog(self)
+        dialog.exec_()
+
+class WriteScheduleDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Write Schedule")
+        self.setGeometry(200, 200, 300, 200)
+
+        layout = QVBoxLayout(self)
+
+        self.file_name_input = QLineEdit()
+        layout.addWidget(QLabel("File Name:"))
+        layout.addWidget(self.file_name_input)
+
+        self.start_time_input = QLineEdit()
+        layout.addWidget(QLabel("Start Time (H:MM):"))
+        layout.addWidget(self.start_time_input)
+
+        self.schedule_type_combo = QComboBox()
+        self.schedule_type_combo.addItems(["Day", "Week", "Month"])
+        layout.addWidget(QLabel("Select Schedule Type:"))
+        layout.addWidget(self.schedule_type_combo)
+
+        button_layout = QHBoxLayout()
+        self.write_button = QPushButton("Write")
+        self.cancel_button = QPushButton("Cancel")
+        button_layout.addWidget(self.write_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        self.write_button.clicked.connect(self.write_schedule)
+        self.cancel_button.clicked.connect(self.reject)
+
+    def write_schedule(self):
+        file_name = self.file_name_input.text()
+        start_time = self.start_time_input.text()
+        schedule_type = self.schedule_type_combo.currentText()
+
+        # Implement the logic to write the schedule based on the provided parameters
+        # You can access the viewer to get schedule data and other relevant information
+
+        self.accept()
+
+if __name__ == '__main__':
+    import sys
+    app = QApplication(sys.argv)
+    viewer = Viewer()
+    viewer.show()
+    sys.exit(app.exec_())
