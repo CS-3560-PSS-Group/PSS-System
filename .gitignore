@@ -2,3 +2,4 @@
 /.vscode
 /Viewer/__pycache__/*
 
+*.pyc
