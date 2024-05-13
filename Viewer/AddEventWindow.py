@@ -1,15 +1,11 @@
-from datetime import datetime
-from PyQt5.QtWidgets import QMessageBox
-
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QLineEdit, QHeaderView, QLabel, QComboBox, QHBoxLayout,
     QDialog, QCheckBox, QColorDialog, QPlainTextEdit, QErrorMessage, QDateEdit,
-    QMessageBox, QCalendarWidget
+    QMessageBox, QCalendarWidget, QRadioButton, QButtonGroup
 )
 from PyQt5.QtCore import Qt, QDate
 from Viewer.QColorButton import QColorButton
-
 
 class AddEventWindow(QDialog):
     def __init__(self, viewer, event_details=None):
@@ -23,23 +19,60 @@ class AddEventWindow(QDialog):
 
         self.create_widgets()
         self.setup_layout()
-        self.populate_event_details(event_details)
-    
+
+        self.daily_checkbox.stateChanged.connect(self.ensure_exclusive_selection)
+        self.weekly_checkbox.stateChanged.connect(self.ensure_exclusive_selection)
+
+        self.hide_type_options()
+        self.recurring_checkbox.stateChanged.connect(self.toggle_type_options_visibility)
+
+        self.transient_checkbox.stateChanged.connect(self.toggle_days_visibility)
+        self.antitask_checkbox.stateChanged.connect(self.toggle_antitask_type_visibility)
+
+        for checkbox in self.days_checkboxes:
+            checkbox.toggled.connect(self.ensure_single_selection)
+
+        self.update_visibility_on_uncheck()
+
+        self.type_radio_buttons = QButtonGroup(self)
+        self.type_radio_buttons.addButton(self.radio_button_class)
+        self.type_radio_buttons.addButton(self.radio_button_study)
+        self.type_radio_buttons.addButton(self.radio_button_sleep)
+        self.type_radio_buttons.addButton(self.radio_button_exercise)
+        self.type_radio_buttons.addButton(self.radio_button_work)
+        self.type_radio_buttons.addButton(self.radio_button_meal)
+        self.type_radio_buttons.addButton(self.radio_button_visit)
+        self.type_radio_buttons.addButton(self.radio_button_shopping)
+        self.type_radio_buttons.addButton(self.radio_button_appointment)
+        self.type_radio_buttons.addButton(self.radio_button_cancellation)
+
+        for radio_button in self.type_radio_buttons.buttons():
+            radio_button.toggled.connect(self.handle_type_selection)
+
 
     def create_widgets(self):
+        # Replace description_edit with type_radio_buttons
         self.event_name_edit = QLineEdit()
         self.start_time_edit = QLineEdit()
         self.end_time_edit = QLineEdit()
-        self.description_edit = QPlainTextEdit()
+        self.type_radio_buttons = QButtonGroup(self)  # Group for radio buttons
         self.color_button = QColorButton()
         self.recurring_checkbox = QCheckBox("Recurring")
-        self.transient_checkbox = QCheckBox("Transient")  # New checkbox for transient
+        self.daily_checkbox = QCheckBox("Daily")  
+        self.weekly_checkbox = QCheckBox("Weekly")  
+        self.transient_checkbox = QCheckBox("Transient")  
+        self.antitask_checkbox = QCheckBox("Antitask")  
         self.transient_checkbox.stateChanged.connect(self.toggle_days_visibility)
+        self.daily_checkbox.hide()  
+        self.weekly_checkbox.hide()  
         self.days_layout = QHBoxLayout()
         self.days_checkboxes = [
             QCheckBox(day) for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         ]
-        self.days_label = QLabel("Select Days:")
+        self.days_label = QLabel("Select a Day:")
+        self.days_label.hide()  
+        for checkbox in self.days_checkboxes:
+            checkbox.hide()  
 
         self.start_am_pm = QComboBox()
         self.start_am_pm.addItems(["AM", "PM"])
@@ -49,25 +82,86 @@ class AddEventWindow(QDialog):
         self.ending_date_edit = QDateEdit()
         self.add_button = QPushButton("Add")
         self.cancel_button = QPushButton("Cancel")
-        self.delete_button = QPushButton("Delete")
-        self.save_button = QPushButton("Save")
-        self.anti_task_button = QPushButton("Anti-Task")  # New button
 
-        self.recurring_checkbox.stateChanged.connect(self.toggle_weekly_box)
+        self.recurring_checkbox.stateChanged.connect(self.toggle_recurring_options)
+        self.weekly_checkbox.stateChanged.connect(self.toggle_days_selection)
         self.add_button.clicked.connect(self.add_or_save_event)
         self.cancel_button.clicked.connect(self.reject)
-        self.delete_button.clicked.connect(self.delete_event)
-        self.save_button.clicked.connect(self.add_or_save_event)
-        self.anti_task_button.clicked.connect(self.anti_task)
 
-    def is_valid_time(self, time_str):
-        try:
-            # Attempt to parse the time string
-            datetime.strptime(time_str, "%I:%M %p")
-            return True
-        except ValueError:
-            return False
+        # Add radio buttons for type selection
+        self.radio_button_daily = QRadioButton("Daily")
+        self.radio_button_weekly = QRadioButton("Weekly")
+        self.radio_button_transient = QRadioButton("Transient")
+        self.radio_button_antitask = QRadioButton("Antitask")
+        self.type_radio_buttons.addButton(self.radio_button_daily)  
+        self.type_radio_buttons.addButton(self.radio_button_weekly)  
+        self.type_radio_buttons.addButton(self.radio_button_transient)  
+        self.type_radio_buttons.addButton(self.radio_button_antitask) 
+
+        self.radio_button_class = QRadioButton("Class")
+        self.radio_button_study = QRadioButton("Study")
+        self.radio_button_sleep = QRadioButton("Sleep")
+        self.radio_button_exercise = QRadioButton("Exercise")
+        self.radio_button_work = QRadioButton("Work")
+        self.radio_button_meal = QRadioButton("Meal")
+
+        # Add transient type radio buttons
+        self.radio_button_visit = QRadioButton("Visit")
+        self.radio_button_shopping = QRadioButton("Shopping")
+        self.radio_button_appointment = QRadioButton("Appointment")
+
+        # Initialize button group for transient types
+        self.type_radio_transient_buttons = QButtonGroup(self)
+
+        # Add transient type radio buttons to button group
+        self.type_radio_transient_buttons.addButton(self.radio_button_visit)
+        self.type_radio_transient_buttons.addButton(self.radio_button_shopping)
+        self.type_radio_transient_buttons.addButton(self.radio_button_appointment)
+
+        # Hide transient type radio buttons initially
+        self.radio_button_visit.hide()
+        self.radio_button_shopping.hide()
+        self.radio_button_appointment.hide()
+
+        # Add antitask type radio buttons
+        self.radio_button_cancellation = QRadioButton("Cancellation")
+        self.type_radio_antitask_buttons = QButtonGroup(self)
+        self.type_radio_antitask_buttons.addButton(self.radio_button_cancellation)
+        self.radio_button_cancellation.hide()
+
+        self.recurring_checkbox.stateChanged.connect(self.unselect_types)
+        self.transient_checkbox.stateChanged.connect(self.unselect_types)
+        self.antitask_checkbox.stateChanged.connect(self.unselect_types)
+
         
+
+
+    def update_visibility_on_uncheck(self):
+        # Connect the toggled signal of each checkbox to the corresponding method
+        self.recurring_checkbox.toggled.connect(self.clear_if_unchecked)
+        self.transient_checkbox.toggled.connect(self.clear_if_unchecked)
+        self.antitask_checkbox.toggled.connect(self.clear_if_unchecked)
+        self.daily_checkbox.toggled.connect(self.clear_if_unchecked)
+        self.weekly_checkbox.toggled.connect(self.clear_if_unchecked)
+
+
+    def clear_if_unchecked(self, checked):
+        # If the sender is not checked anymore, clear the corresponding widgets
+        if not checked:
+            sender = self.sender()
+            if sender == self.recurring_checkbox:
+                self.hide_type_options()
+            elif sender == self.transient_checkbox:
+                self.toggle_days_visibility(Qt.Unchecked)
+            elif sender == self.antitask_checkbox:
+                pass  # Placeholder for any other actions you want to perform
+            elif sender == self.daily_checkbox or sender == self.weekly_checkbox:
+                self.days_label.hide()
+                for checkbox in self.days_checkboxes:
+                    checkbox.hide()
+                    checkbox.setChecked(False)  # Uncheck the checkboxes
+
+                
     def setup_layout(self):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Event Name:"))
@@ -78,18 +172,53 @@ class AddEventWindow(QDialog):
         layout.addWidget(QLabel("End Time (H:MM):"))
         layout.addWidget(self.end_time_edit)
         layout.addWidget(self.end_am_pm)
-        layout.addWidget(QLabel("Description:"))
-        layout.addWidget(self.description_edit)
+        
+        # Add the checkboxes layout above the description
+        checkboxes_layout = QHBoxLayout()
+        checkboxes_layout.addWidget(self.recurring_checkbox)
+        checkboxes_layout.addWidget(self.transient_checkbox)  
+        checkboxes_layout.addWidget(self.antitask_checkbox)  
+        layout.addLayout(checkboxes_layout)
+
+        # Add the daily and weekly checkboxes in a row below recurring checkbox
+        recurring_options_layout = QHBoxLayout()
+        recurring_options_layout.addWidget(self.daily_checkbox)
+        recurring_options_layout.addWidget(self.weekly_checkbox)
+        layout.addLayout(recurring_options_layout)
+        
+        # Add the days label and checkboxes below the transient, antitask checkboxes
+        days_layout = QHBoxLayout()
+        days_layout.addWidget(self.days_label)
+        for checkbox in self.days_checkboxes:
+            days_layout.addWidget(checkbox)
+        layout.addLayout(days_layout)
+        
+        # Add the "Type:" label
+        layout.addWidget(QLabel("Type:"))
+
+        # Add a layout for type selection
+        type_selection_layout = QVBoxLayout()
+
+        # Add the radio buttons for transient types
+        type_selection_layout.addWidget(self.radio_button_class)
+        type_selection_layout.addWidget(self.radio_button_study)
+        type_selection_layout.addWidget(self.radio_button_sleep)
+        type_selection_layout.addWidget(self.radio_button_exercise)
+        type_selection_layout.addWidget(self.radio_button_work)
+        type_selection_layout.addWidget(self.radio_button_meal)
+
+        # Add the radio buttons for cancellation type
+        type_selection_layout.addWidget(self.radio_button_cancellation)
+
+        # Add the radio buttons for transient types
+        type_selection_layout.addWidget(self.radio_button_visit)
+        type_selection_layout.addWidget(self.radio_button_shopping)
+        type_selection_layout.addWidget(self.radio_button_appointment)
+
+        layout.addLayout(type_selection_layout)
+
         layout.addWidget(QLabel("Color:"))
         layout.addWidget(self.color_button)
-        layout.addWidget(self.recurring_checkbox)
-        layout.addLayout(self.days_layout)
-        layout.addWidget(self.transient_checkbox)
-
-        self.days_layout.addWidget(self.days_label)
-        for checkbox in self.days_checkboxes:
-            self.days_layout.addWidget(checkbox)
-            checkbox.hide()  # Initially hide all day checkboxes
 
         date_layout = QHBoxLayout()
         date_layout.addWidget(QLabel("Beginning Date:"))
@@ -100,43 +229,8 @@ class AddEventWindow(QDialog):
 
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.add_button)
-        button_layout.addWidget(self.delete_button)
         button_layout.addWidget(self.cancel_button)
-        button_layout.addWidget(self.save_button)
-        button_layout.addWidget(self.anti_task_button)  # Add the Anti-Task button
         layout.addLayout(button_layout)
-
-
-    def anti_task(self):
-        # This method is called when the "Anti-Task" button is clicked
-        print("Anti-Task button clicked")
-
-    def toggle_weekly_box(self, state):
-        if state == Qt.Checked:
-            for checkbox in self.days_checkboxes:
-                checkbox.show()
-        else:
-            for checkbox in self.days_checkboxes:
-                checkbox.hide()
-
-    def populate_event_details(self, event_details):
-        if event_details:
-            self.event_name_edit.setText(event_details["name"])
-            self.start_time_edit.setText(event_details["start"].split(" ")[0])
-            self.end_time_edit.setText(event_details["end"].split(" ")[0])
-            self.description_edit.setPlainText(event_details["description"])
-            self.color_button.color = event_details["color"]
-            self.color_button.setStyleSheet("background-color: {}".format(event_details["color"].name()))
-
-            selected_days = event_details["selected_days"]
-            for checkbox in self.days_checkboxes:
-                checkbox.setChecked(checkbox.text() in selected_days)
-
-            # Ensuring times that end with "00" retains the trailing 0
-            if event_details["start"].split(" ")[0].split(":")[1] == "0":
-                self.start_time_edit.setText(event_details["start"].split(" ")[0].split(":")[0] + ":00")
-            if event_details["end"].split(" ")[0].split(":")[1] == "0":
-                self.end_time_edit.setText(event_details["end"].split(" ")[0].split(":")[0] + ":00")
 
     def add_or_save_event(self):
         if self.validate_inputs():
@@ -144,23 +238,6 @@ class AddEventWindow(QDialog):
                 self.save_event()
             else:
                 self.add_event()
-
-    def delete_event(self):
-        # Retrieve the selected days for the event
-        selected_days = [checkbox.text() for checkbox in self.days_checkboxes if checkbox.isChecked()]
-
-        # Retrieve the start and end time of the event
-        start_time = self.start_time_edit.text() + " " + self.start_am_pm.currentText()
-        end_time = self.end_time_edit.text() + " " + self.end_am_pm.currentText()
-
-        # Ensure that all required arguments are available
-        if selected_days and start_time and end_time:
-            # Call delete_previous_event with the required arguments
-            self.delete_previous_event(selected_days, start_time, end_time)
-        else:
-            QMessageBox.warning(self, "Error", "Missing required information.")
-
-        self.close()
 
     def validate_inputs(self):
         event_name = self.event_name_edit.text()
@@ -202,30 +279,172 @@ class AddEventWindow(QDialog):
             self.show_error("Start time does not exist in the time slots.")
             return
 
-        end_item = self.viewer.tableWidget.findItems(end_time, Qt.MatchExactly)
-        if not end_item:
-            self.show_error("End time does not exist in the time slots.")
-            return
-
-        start_row_index = start_item[0].row()
-        end_row_index = end_item[0].row()
-
-        for day in selected_days:
-            column_index = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].index(day) + 1
-            for row in range(start_row_index, end_row_index + 1):
-                start_item = self.viewer.tableWidget.verticalHeaderItem
-
-        self.viewer.add_event_to_schedule(new_event)
-        self.close()
-
     def toggle_days_visibility(self, state):
         if state == Qt.Checked:  # If transient checkbox is checked
-            # Hide the days checkboxes
+            self.days_label.hide()
             for checkbox in self.days_checkboxes:
                 checkbox.hide()
-            self.days_label.hide()  # Optionally hide the days label as well
+            self.show_transient_types()
+        else:  # If transient checkbox is unchecked
+            if self.weekly_checkbox.isChecked():  # Only show if weekly checkbox is checked
+                self.days_label.show()
+                for checkbox in self.days_checkboxes:
+                    checkbox.show()
+            else:
+                self.days_label.hide()
+                for checkbox in self.days_checkboxes:
+                    checkbox.hide()
+                self.hide_transient_types()
+
+    def show_transient_types(self):
+        self.radio_button_visit.show()
+        self.radio_button_shopping.show()
+        self.radio_button_appointment.show()
+
+    def hide_transient_types(self):
+        self.radio_button_visit.hide()
+        self.radio_button_shopping.hide()
+        self.radio_button_appointment.hide()
+
+
+    def ensure_single_selection(self, checked):
+        # Uncheck all other checkboxes if one is checked
+        if checked:
+            for checkbox in self.days_checkboxes:
+                if checkbox != self.sender():
+                    checkbox.setChecked(False)
+
+    def ensure_exclusive_selection(self, state):
+        # If daily checkbox is checked, uncheck weekly checkbox
+        if self.daily_checkbox.isChecked() and self.weekly_checkbox.isChecked():
+            self.weekly_checkbox.setChecked(False)
+        
+        # If weekly checkbox is checked, uncheck daily checkbox
+        if self.weekly_checkbox.isChecked() and self.daily_checkbox.isChecked():
+            self.daily_checkbox.setChecked(False)
+
+    def update_type_options(self):
+        # Clear existing radio buttons in the button group
+        self.type_radio_buttons.buttons()
+
+        # Check if Recurring checkbox is checked
+        if self.recurring_checkbox.isChecked():
+            # Add Type options for recurring events
+            self.type_radio_buttons.addButton(self.radio_button_class)
+            self.type_radio_buttons.addButton(self.radio_button_study)
+            self.type_radio_buttons.addButton(self.radio_button_sleep)
+            self.type_radio_buttons.addButton(self.radio_button_exercise)
+            self.type_radio_buttons.addButton(self.radio_button_work)
+            self.type_radio_buttons.addButton(self.radio_button_meal)
         else:
-            # Show the days checkboxes
+            # Add default Type option for non-recurring events
+            self.type_radio_buttons.addButton(self.radio_button_meal)
+
+        # Set the first radio button as default checked
+        self.type_radio_buttons.buttons()[0].setChecked(True)
+    
+    def toggle_type_options_visibility(self, state):
+        # Show or hide the radio buttons for Type options based on the state of the recurring_checkbox
+        if state == Qt.Checked:
+            self.show_type_options()
+        else:
+            self.hide_type_options()
+    
+    def hide_type_options(self):
+        # Hide the radio buttons for Type options
+        self.radio_button_class.hide()
+        self.radio_button_study.hide()
+        self.radio_button_sleep.hide()
+        self.radio_button_exercise.hide()
+        self.radio_button_work.hide()
+        self.radio_button_meal.hide()
+
+    def show_type_options(self):
+        # Show the radio buttons for Type options
+        self.radio_button_class.show()
+        self.radio_button_study.show()
+        self.radio_button_sleep.show()
+        self.radio_button_exercise.show()
+        self.radio_button_work.show()
+        self.radio_button_meal.show()
+
+    def toggle_recurring_options(self, state):
+        # If recurring checkbox is checked, show daily and weekly checkboxes
+        if state == Qt.Checked:
+            self.daily_checkbox.show()
+            self.weekly_checkbox.show()
+        else:
+            # If recurring checkbox is unchecked, hide daily and weekly checkboxes
+            self.daily_checkbox.hide()
+            self.weekly_checkbox.hide()
+            # Also hide the days label and checkboxes
+            self.days_label.hide()
+            for checkbox in self.days_checkboxes:
+                checkbox.hide()
+    
+    def toggle_transient_types_visibility(self, state):
+        # If transient checkbox is checked, show transient type radio buttons
+        if state == Qt.Checked:
+            self.radio_button_visit.show()
+            self.radio_button_shopping.show()
+            self.radio_button_appointment.show()
+        else:
+            # If transient checkbox is unchecked, hide transient type radio buttons
+            self.radio_button_visit.hide()
+            self.radio_button_shopping.hide()
+            self.radio_button_appointment.hide()
+
+    def toggle_days_selection(self, state):
+        # If weekly checkbox is checked, show the days label and checkboxes
+        if state == Qt.Checked:
+            self.days_label.show()
             for checkbox in self.days_checkboxes:
                 checkbox.show()
-            self.days_label.show()
+        else:
+            # If weekly checkbox is unchecked, hide the days label and checkboxes
+            self.days_label.hide()
+            for checkbox in self.days_checkboxes:
+                checkbox.hide()
+
+    def toggle_antitask_type_visibility(self, state):
+        # If antitask checkbox is checked, show antitask type radio buttons
+        if state == Qt.Checked:
+            self.show_antitask_type_options()
+        else:
+            # If antitask checkbox is unchecked, hide antitask type radio buttons
+            self.hide_antitask_type_options()
+
+    def show_antitask_type_options(self):
+        self.radio_button_cancellation.show()
+
+    def hide_antitask_type_options(self):
+        self.radio_button_cancellation.hide()
+
+    def clear_hidden_selections(self):
+        # If all checkboxes are unchecked
+        if not self.recurring_checkbox.isChecked() and not self.transient_checkbox.isChecked() and not self.antitask_checkbox.isChecked():
+            # Clear the selection of invisible radio buttons
+            for radio_button in [self.radio_button_cancellation, self.radio_button_visit, self.radio_button_shopping, self.radio_button_appointment]:
+                if not radio_button.isVisible():
+                    radio_button.setChecked(False)
+
+            # Clear the selection of invisible checkboxes
+            for checkbox in self.days_checkboxes:
+                if not checkbox.isVisible():
+                    checkbox.setChecked(False)
+
+
+    def unselect_types(self):
+        if not self.recurring_checkbox.isChecked() or not self.transient_checkbox.isChecked() or not self.antitask_checkbox.isChecked():
+            # Unselect all types
+            self.type_radio_buttons.setExclusive(False)
+            for button in self.type_radio_buttons.buttons():
+                button.setChecked(False)
+            self.type_radio_buttons.setExclusive(True)
+
+    def handle_type_selection(self, checked):
+        # Uncheck all other radio buttons if one is checked
+        if checked:
+            for radio_button in self.type_radio_buttons.buttons():
+                if radio_button != self.sender():
+                    radio_button.setChecked(False)
