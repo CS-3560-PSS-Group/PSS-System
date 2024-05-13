@@ -20,7 +20,7 @@ class Task:
         d = {
             "Name": self.name,
             "Type": self.task_type,
-            "StartDate": self.start_date,
+            "Date": self.start_date,
             "StartTime": self.start_time,
             "Duration": self.duration
         }
@@ -41,11 +41,15 @@ class RecurringTask(Task):
         # check to see if end_date is after last week day ... ?
     
     def to_dict(self):
-        d = super().to_dict()
-        d.update({                      # add these two values to the dictionary
+        d = {                      # in the Recurring Task, its named StartDate, while the others are named Date, so it makes it hard to reuse code here
+            "Name": self.name,
+            "Type": self.task_type,
+            "StartDate": self.start_date,
+            "StartTime": self.start_time,
+            "Duration": self.duration,
             "EndDate": self.end_date,
             "Frequency": self.frequency
-        })
+        }
         return d
     
 
