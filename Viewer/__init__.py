@@ -6,10 +6,13 @@ from PyQt5.QtCore import Qt
 from Viewer.AddEventWindow import AddEventWindow
 import json
 from datetime import datetime
+from Controller import Controller
+from Task import Task, AntiTask, RecurringTask, TransientTask
 
 class Viewer(QWidget):
-    def __init__(self):
+    def __init__(self, controller: Controller):
         super().__init__()
+        self.controller = controller
         self.initUI()
 
     def initUI(self):
@@ -45,6 +48,7 @@ class Viewer(QWidget):
         parent_layout.addLayout(search_layout)
 
         self.search_input = QLineEdit()
+        self.search_input.returnPressed.connect(self.search_task)
         search_layout.addWidget(self.search_input)
 
         self.search_button = QPushButton("Search")
@@ -85,6 +89,9 @@ class Viewer(QWidget):
         if not task_name:
             QMessageBox.warning(self, "Error", "Please enter a task name to search.")
             return
+        task = self.controller.find_task_by_name(task_name)
+        if task == None:
+            QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
         # Implement the logic to search for the task by name and display its information if found
         # You can use the viewer to access the schedule data and search for the task by name
         # Display the information using QMessageBox or any other appropriate widget

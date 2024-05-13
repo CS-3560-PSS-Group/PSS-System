@@ -52,7 +52,12 @@ class Model:
 
     def get_week_schedule(self, week_start_date):
         pass
-
+    
+    def find_task_by_name(self, name: str) -> Task:
+        for task in self.tasks:
+            if task.name == name:
+                return task
+        return None
     
     # return list of RecurringTask objects in model
     def get_recurring_tasks(self):
