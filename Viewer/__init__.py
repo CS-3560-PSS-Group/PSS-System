@@ -124,19 +124,18 @@ class Viewer(QWidget):
     def export_schedule(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
         if file_name:
-            # Write the schedule to the file
-            with open(file_name, 'w') as file:
-                # Write the schedule content here
-                pass  # Placeholder for actual writing logic
+            try:
+                self.controller.export_schedule_to_json_file(file_name)
+            except:
+                QMessageBox.warning(self, "Error", f"Failed to write to {file_name}.")
 
     def load_schedule(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Schedule", "", "JSON Files (*.json)")
-        if file_name:
-            # Load the schedule from the JSON file
-            with open(file_name, 'r') as file:
-                schedule_data = json.load(file)
-                # Process the loaded schedule data
-                pass  # Placeholder for actual processing logic
+        if file_name: 
+            try:
+                self.controller.import_schedule_from_json_file(file_name)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f'Failed to load schedule: {str(e)}')
 
     def write_schedule_dialog(self):
         dialog = WriteScheduleDialog(self)
