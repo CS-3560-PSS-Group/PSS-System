@@ -14,6 +14,17 @@ class Task:
 
         if self.duration < 0.25 or self.duration > 23.75:
             raise ValueError("Duration must be between 0.25 and 23.75")
+    
+    # return it as a dictionary, which can then be used for JSON
+    def to_dict(self):
+        d = {
+            "Name": self.name,
+            "Type": self.task_type,
+            "StartDate": self.start_date,
+            "StartTime": self.start_time,
+            "Duration": self.duration
+        }
+        return d
 
 
 # it is assumed that a recurring task will have it's end_date set at or after the last week day. In other words, end_date can't be 5/1/24 when Thursday is set to True.
@@ -28,13 +39,22 @@ class RecurringTask(Task):
     def add_anti_task(self, anti_task):
         self.anti_tasks.append(anti_task)
         # check to see if end_date is after last week day ... ?
+    
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({                      # add these two values to the dictionary
+            "EndDate": self.end_date,
+            "Frequency": self.frequency
+        })
+        return d
+    
 
 class TransientTask(Task):
     pass
 
 class AntiTask(Task):
-    def __init__(self, name: str, task_type: str, start_date: int, start_time: float, duration: float): 
-        super().__init__(name, task_type, start_date, start_time, duration)
+    def __init__(self, name: str, start_date: int, start_time: float, duration: float): 
+        super().__init__(name, "Cancellation", start_date, start_time, duration)
         self.task_reference = None
 
     # Assigns this anti-task to a specific recurring task (not utilized yet)
