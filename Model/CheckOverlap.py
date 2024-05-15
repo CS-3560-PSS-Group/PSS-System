@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from Task.Task import Task, TransientTask, RecurringTask, AntiTask
+from Task import Task, TransientTask, RecurringTask, AntiTask
 
 # wrapper function for checking overlap between any two kinds of tasks
 def check_overlap(task1: Task, task2: Task):

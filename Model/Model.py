@@ -1,13 +1,23 @@
 import json 
 from datetime import datetime, timedelta
 
-from Task.Task import Task, TransientTask, RecurringTask, AntiTask
+from Task.Task import Task, TransientTask, RecurringTask, AntiTask, Event
 
 
-from .CheckOverlap import check_overlap, can_apply_anti_task
+from .CheckOverlap import check_overlap, can_apply_anti_task, get_datetime_from_date, get_datetime_from_datetime, get_datetime_from_dur
 
-# Not even god can help me refactor this code
+# checks if two ranges overlap. start and end are both inclusive bounds. 
+def do_datetime_ranges_overap(start1: datetime, end1: datetime, start2: datetime, end2: datetime) -> bool:
+    return (start1 <= end2) and (end1 >= start2)
 
+def get_date_and_time_from_datetime(dt):
+    # Extract date components
+    date_int = int(dt.strftime("%Y%m%d"))
+
+    # Calculate time in decimal hours
+    time_float = dt.hour + dt.minute / 60 + dt.second / 3600
+
+    return date_int, time_float
 
 class Model:
     def __init__(self):
@@ -50,8 +60,47 @@ class Model:
         raise LookupError('Error: AntiTask does not apply to any existing recurring task')
 
 
-    def get_week_schedule(self, week_start_date):
-        pass
+    # this function will get all the Events that occur from the start_date to the end_date, exclusive. No specific times, just the whole day as a boundary.
+    def get_events_within_timeframe(self, start_date: int, days: int) -> list[Event]:
+        result = []
+
+        start_datetime = get_datetime_from_date(start_date)
+        end_datetime = start_datetime + datetime.timedelta(days = (days-1), hours = 23, minutes = 45)  # making inclusive end_datetime. this is the last timestamap of the timeframe.
+
+        for task in self.tasks:
+            if type(task) is TransientTask:
+                begin = get_datetime_from_datetime(task.start_date, task.start_time)
+                end = get_datetime_from_dur(begin, task.duration)
+
+                if do_datetime_ranges_overap(start_datetime, end_datetime, begin, end): # this task happens during the timeframe
+                    result.append(Event(task.start_date, task.start_time, task.duration, task))
+            elif type(task) is RecurringTask:
+                # this is the last occurrence of the recurring task. it is the datetime of the start of that occurrence 
+                last_occurrence_start_datetime = get_datetime_from_datetime(task.end_date, task.start_time)   
+
+                occurrence_start_datetime = get_datetime_from_datetime(task.start_date, task.start_time)
+
+                while occurrence_start_datetime < end_datetime and occurrence_start_datetime <= last_occurrence_start_datetime:
+                    occurrence_end_datetime = get_datetime_from_dur(occurrence_start_datetime, task.duration)
+
+                    # if this occurrence happens during the timeframe
+                    if do_datetime_ranges_overap(start_datetime, end_datetime, occurrence_start_datetime, occurrence_end_datetime):
+                        # check if theres any anti-task affecting this occurrence. if there are none, then this can be added as an event.
+                        # the specifications for the assignment requires that anti-task's start and end corresponds exactly with the recurring task, so this is an adequate check. 
+                        if not any(get_datetime_from_datetime(anti_task.start_date, anti_task.start_time) == occurrence_start_datetime for anti_task in task.anti_tasks):   
+                            occurrence_start_date, occurrence_start_time = get_date_and_time_from_datetime(occurrence_start_datetime)
+                            result.append(Event(occurrence_start_date, occurrence_start_time, task.duration, task))
+                        
+                    occurrence_start_datetime + datetime.timedelta(days=task.frequency)
+        
+        return result
+
+
+
+
+
+
+
     
     def find_task_by_name(self, name: str) -> Task:
         for task in self.tasks:
