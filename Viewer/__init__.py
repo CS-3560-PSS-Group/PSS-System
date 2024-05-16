@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSpacerItem,QSizePolicy, QGroupBox, QDateEdit,
-    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QStackedWidget, QRadioButton
+    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox
 )
 from PyQt5.QtCore import Qt, QDateTime
 from Viewer.AddEventWindow import AddEventWindow
@@ -292,10 +292,49 @@ class ViewScheduleDialog(QDialog):
 
         task_list = self.controller.get_events_within_timeframe(date_int, timeframe)
         if task_list:
-            schedule_text = "\n".join(str(task) for task in task_list)
-            QMessageBox.information(self, "Schedule", schedule_text)
+            schedule_text = ""
+            for event in task_list:
+                task = event.task
+                task_str = f"Name: {task.name}, Type: {task.task_type}, Date: {event.start_date}, StartTime: {event.start_time}, Duration: {event.duration}\n"
+                schedule_text += task_str
+
+            dialog = ScheduleDialog(self)
+            dialog.set_schedule_text(schedule_text)
+            dialog.exec_()
         else:
             QMessageBox.information(self, "Schedule", "No tasks found.")
+class ScheduleDialog(QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("Schedule")
+            self.setGeometry(200, 200, 400, 300)
+
+            layout = QVBoxLayout(self)
+
+            # Create a scroll area
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+
+        # Create a widget to hold the text
+            scroll_widget = QWidget()
+            scroll_layout = QVBoxLayout(scroll_widget)
+
+        # Create a QLabel to display the schedule text
+            self.schedule_label = QLabel()
+            self.schedule_label.setWordWrap(True)
+            scroll_layout.addWidget(self.schedule_label)
+
+        # Set the widget into the scroll area
+            scroll_area.setWidget(scroll_widget)
+            layout.addWidget(scroll_area)
+
+        # Create buttons
+            button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+            button_box.accepted.connect(self.accept)
+            layout.addWidget(button_box)
+
+        def set_schedule_text(self, schedule_text):
+            self.schedule_label.setText(schedule_text)
 
 if __name__ == '__main__':
     import sys
