@@ -74,6 +74,10 @@ class Viewer(QWidget):
         self.write_button.clicked.connect(self.write_schedule_dialog)
         layout.addWidget(self.write_button)
 
+        self.view_schedule_button = QPushButton("View Schedule")
+        self.view_schedule_button.clicked.connect(self.view_schedule_dialog)
+        layout.addWidget(self.view_schedule_button)
+
         self.tableWidget.cellClicked.connect(self.edit_event_details)
 
     def create_search_layout(self, parent_layout):
@@ -172,6 +176,10 @@ class Viewer(QWidget):
         dialog = WriteScheduleDialog(self, self.controller)
         dialog.exec_()
 
+    def view_schedule_dialog(self):
+        dialog = ViewScheduleDialog(self, self.controller)
+        dialog.exec_()
+
     def refresh_views(self):
         self.month_view_widget.updateCells()
 
@@ -235,6 +243,59 @@ class WriteScheduleDialog(QDialog):
         self.controller.write_schedule(file_name, date_int, schedule_type)
         
         self.accept()
+
+class ViewScheduleDialog(QDialog):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.setWindowTitle("View Schedule")
+        self.setGeometry(200, 200, 300, 200)
+
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Start Date:"))
+
+        self.dateedit = QDateEdit(calendarPopup=True)
+        layout.addWidget(self.dateedit)
+        self.dateedit.setDateTime(QDateTime.currentDateTime())
+
+        self.schedule_type_combo = QComboBox()
+        self.schedule_type_combo.addItems(["Day", "Week", "Month"])
+        layout.addWidget(QLabel("Select Schedule Type:"))
+        layout.addWidget(self.schedule_type_combo)
+
+        button_layout = QHBoxLayout()
+        self.view_schedule_button = QPushButton("View")
+        self.cancel_button = QPushButton("Cancel")
+        button_layout.addWidget(self.view_schedule_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        self.view_schedule_button.clicked.connect(self.view_schedule)
+        self.cancel_button.clicked.connect(self.reject)
+
+        self.setLayout(layout)
+
+    def view_schedule(self):
+        schedule_type = self.schedule_type_combo.currentText()
+        date = self.dateedit.date()
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
+
+        if schedule_type == "Day":
+            timeframe = 1
+        elif schedule_type == "Week":
+            timeframe = 7
+        elif schedule_type == "Month":
+            timeframe = 30
+        else:
+            timeframe = 1  # Default to day if the schedule type is not recognized
+
+        task_list = self.controller.get_events_within_timeframe(date_int, timeframe)
+        if task_list:
+            schedule_text = "\n".join(str(task) for task in task_list)
+            QMessageBox.information(self, "Schedule", schedule_text)
+        else:
+            QMessageBox.information(self, "Schedule", "No tasks found.")
 
 if __name__ == '__main__':
     import sys
