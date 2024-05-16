@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSpacerItem,QSizePolicy, QGroupBox,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSpacerItem,QSizePolicy, QGroupBox, QDateEdit,
     QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QStackedWidget, QRadioButton
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDateTime
 from Viewer.AddEventWindow import AddEventWindow
 import json
 from datetime import datetime
@@ -51,7 +51,7 @@ class Viewer(QWidget):
         groupBoxLayout.addWidget(self.radioBtnWeekly)
         groupBoxLayout.addWidget(self.radioBtnMonthly)
 
-         # Set the group box layout
+        # Set the group box layout
         groupBox.setLayout(groupBoxLayout)
 
         # Add the group box to the main layout and center it horizontally
@@ -169,27 +169,40 @@ class Viewer(QWidget):
                 QMessageBox.warning(self, "Error", f'Failed to load schedule: {str(e)}')
 
     def write_schedule_dialog(self):
-        dialog = WriteScheduleDialog(self)
+        dialog = WriteScheduleDialog(self, self.controller)
         dialog.exec_()
 
     def refresh_views(self):
         self.month_view_widget.updateCells()
 
 class WriteScheduleDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent, controller):
         super().__init__(parent)
+        self.controller = controller
         self.setWindowTitle("Write Schedule")
         self.setGeometry(200, 200, 300, 200)
 
         layout = QVBoxLayout(self)
 
-        self.file_name_input = QLineEdit()
         layout.addWidget(QLabel("File Name:"))
-        layout.addWidget(self.file_name_input)
+        
+        hbox = QHBoxLayout()
+        self.file_path_edit = QLineEdit()
+        hbox.addWidget(self.file_path_edit)
 
-        self.start_time_input = QLineEdit()
-        layout.addWidget(QLabel("Start Time (H:MM):"))
-        layout.addWidget(self.start_time_input)
+        browse_button = QPushButton('Browse')
+        browse_button.clicked.connect(self.open_file_dialog)
+        hbox.addWidget(browse_button)
+
+        layout.addLayout(hbox)
+
+        self.setLayout(layout)
+
+        layout.addWidget(QLabel("Start Date:"))
+        
+        self.dateedit = QDateEdit(calendarPopup=True)
+        layout.addWidget(self.dateedit)
+        self.dateedit.setDateTime(QDateTime.currentDateTime())
 
         self.schedule_type_combo = QComboBox()
         self.schedule_type_combo.addItems(["Day", "Week", "Month"])
@@ -206,14 +219,21 @@ class WriteScheduleDialog(QDialog):
         self.write_button.clicked.connect(self.write_schedule)
         self.cancel_button.clicked.connect(self.reject)
 
+    def open_file_dialog(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt)", options=options)
+        if file_path:
+            self.file_path_edit.setText(file_path)
+
+
     def write_schedule(self):
-        file_name = self.file_name_input.text()
-        start_time = self.start_time_input.text()
+        file_name = self.file_path_edit.text()
+        date = self.dateedit.date()
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
         schedule_type = self.schedule_type_combo.currentText()
 
-        # Implement the logic to write the schedule based on the provided parameters
-        # You can access the viewer to get schedule data and other relevant information
-
+        self.controller.write_schedule(file_name, date_int, schedule_type)
+        
         self.accept()
 
 if __name__ == '__main__':

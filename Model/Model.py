@@ -91,8 +91,10 @@ class Model:
                             occurrence_start_date, occurrence_start_time = get_date_and_time_from_datetime(occurrence_start_datetime)
                             result.append(Event(occurrence_start_date, occurrence_start_time, task.duration, task))
                         
-                    occurrence_start_datetime + timedelta(days=task.frequency)
+                    occurrence_start_datetime = occurrence_start_datetime + timedelta(days=task.frequency)
         
+        result.sort(key=lambda event: get_datetime_from_datetime(event.start_date, event.start_time))
+
         return result
 
 

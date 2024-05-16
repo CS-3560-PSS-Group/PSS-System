@@ -5,6 +5,8 @@ from PyQt5.QtGui import QTextCharFormat
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 
+import random
+
 class MonthViewWidget(QCalendarWidget):
     def __init__(self, controller, parent=None):
         super(MonthViewWidget, self).__init__(parent, gridVisible=False,

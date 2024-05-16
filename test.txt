@@ -1,0 +1,240 @@
+[
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200414,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200414,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200415,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200415,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200416,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200416,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200417,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200417,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200418,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200418,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200419,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200419,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200420,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200420,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200421,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200421,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200422,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200422,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200423,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200423,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200424,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200424,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200425,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200425,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200426,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200426,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200427,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200427,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200428,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200428,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200429,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200429,
+    "StartTime": 17.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Homework",
+    "Type": "Study",
+    "Date": 20200430,
+    "StartTime": 15.0,
+    "Duration": 1
+  },
+  {
+    "Name": "Dinner",
+    "Type": "Meal",
+    "Date": 20200430,
+    "StartTime": 17.0,
+    "Duration": 1
+  }
+]
