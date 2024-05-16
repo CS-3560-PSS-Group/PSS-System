@@ -1,8 +1,10 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSpacerItem,QSizePolicy, QGroupBox, QDateEdit,
-    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, 
+    QSpacerItem,QSizePolicy, QGroupBox, QDateEdit, QPushButton, QHeaderView, 
+    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,
+    QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox, QFrame
 )
-from PyQt5.QtCore import Qt, QDateTime
+from PyQt5.QtCore import Qt, QDateTime, QDate
 from Viewer.AddEventWindow import AddEventWindow
 import json
 from datetime import datetime
@@ -292,49 +294,57 @@ class ViewScheduleDialog(QDialog):
 
         task_list = self.controller.get_events_within_timeframe(date_int, timeframe)
         if task_list:
-            schedule_text = ""
-            for event in task_list:
-                task = event.task
-                task_str = f"Name: {task.name}, Type: {task.task_type}, Date: {event.start_date}, StartTime: {event.start_time}, Duration: {event.duration}\n"
-                schedule_text += task_str
-
             dialog = ScheduleDialog(self)
-            dialog.set_schedule_text(schedule_text)
+            dialog.set_schedule(task_list)
             dialog.exec_()
         else:
             QMessageBox.information(self, "Schedule", "No tasks found.")
+
 class ScheduleDialog(QDialog):
-        def __init__(self, parent=None):
-            super().__init__(parent)
-            self.setWindowTitle("Schedule")
-            self.setGeometry(200, 200, 400, 300)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Schedule")
+        self.setGeometry(200, 200, 600, 400)
 
-            layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self)
 
-            # Create a scroll area
-            scroll_area = QScrollArea()
-            scroll_area.setWidgetResizable(True)
+        # Create a table widget
+        self.table_widget = QTableWidget()
+        layout.addWidget(self.table_widget)
 
-        # Create a widget to hold the text
-            scroll_widget = QWidget()
-            scroll_layout = QVBoxLayout(scroll_widget)
+        # Set table properties
+        self.table_widget.setColumnCount(5)  # Number of columns
+        self.table_widget.setHorizontalHeaderLabels(["Name", "Type", "Date", "Start Time", "Duration"])
 
-        # Create a QLabel to display the schedule text
-            self.schedule_label = QLabel()
-            self.schedule_label.setWordWrap(True)
-            scroll_layout.addWidget(self.schedule_label)
-
-        # Set the widget into the scroll area
-            scroll_area.setWidget(scroll_widget)
-            layout.addWidget(scroll_area)
+        # Set up the horizontal header
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
 
         # Create buttons
-            button_box = QDialogButtonBox(QDialogButtonBox.Ok)
-            button_box.accepted.connect(self.accept)
-            layout.addWidget(button_box)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+        layout.addWidget(button_box)
 
-        def set_schedule_text(self, schedule_text):
-            self.schedule_label.setText(schedule_text)
+    def set_schedule(self, task_list):
+        self.table_widget.setRowCount(len(task_list))
+        
+        for row, event in enumerate(task_list):
+            task = event.task
+            date_str = QDate.fromString(str(event.start_date), "yyyyMMdd").toString("MM/dd/yyyy")  # Convert date to MM/DD/YYYY format
+            self.table_widget.setItem(row, 0, QTableWidgetItem(task.name))
+            self.table_widget.setItem(row, 1, QTableWidgetItem(task.task_type))
+            self.table_widget.setItem(row, 2, QTableWidgetItem(date_str)) 
+            self.table_widget.setItem(row, 3, QTableWidgetItem(str(event.start_time)))
+            self.table_widget.setItem(row, 4, QTableWidgetItem(str(event.duration)))
+
+          # Set up the horizontal header
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        
+        # Add style sheet to create a line under the header
+        header.setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
+
 
 if __name__ == '__main__':
     import sys
