@@ -190,6 +190,8 @@ class Model:
 
     # edits a recurring or transient task object in Model
     # parameters: task_name (string), task (new task object to replace specified task)
+    # return True if success, LookupError if taskname isn't in Model, TypeError if task 
+    # object type doesn't match object in Model, ValueError if edited task can't be added to Model
     def edit_task(self, task_name: str, task: Task):
 
         # identify task to be edited and raise error if does not exist in Model
@@ -206,5 +208,16 @@ class Model:
                 if can_apply_anti_task(atask, task):
                     task.add_anti_task(atask)
                     atask.reference_task(task)
+        
+        # make a backup up the current task list
+        temp_list = self.tasks.copy()  
 
-        temp_list = self.tasks.copy()        
+        # attempt to delete task and add edited version
+        try:
+            self.delete_task(task_name)
+            self.add_task(task)
+            return True
+        # restore tasklist and raise error if changes fail
+        except:
+            self.tasks = temp_list
+            raise ValueError("Failed to edit task, pontential overlap, anti-tasks will not carry over if they can't be re-added to modified task")
