@@ -65,7 +65,7 @@ class Model:
         result = []
 
         start_datetime = get_datetime_from_date(start_date)
-        end_datetime = start_datetime + datetime.timedelta(days = (days-1), hours = 23, minutes = 45)  # making inclusive end_datetime. this is the last timestamap of the timeframe.
+        end_datetime = start_datetime + timedelta(days = (days-1), hours = 23, minutes = 45)  # making inclusive end_datetime. this is the last timestamap of the timeframe.
 
         for task in self.tasks:
             if type(task) is TransientTask:
@@ -91,7 +91,7 @@ class Model:
                             occurrence_start_date, occurrence_start_time = get_date_and_time_from_datetime(occurrence_start_datetime)
                             result.append(Event(occurrence_start_date, occurrence_start_time, task.duration, task))
                         
-                    occurrence_start_datetime + datetime.timedelta(days=task.frequency)
+                    occurrence_start_datetime + timedelta(days=task.frequency)
         
         return result
 

@@ -6,12 +6,13 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 
 class MonthViewWidget(QCalendarWidget):
-    def __init__(self, parent=None):
+    def __init__(self, controller, parent=None):
         super(MonthViewWidget, self).__init__(parent, gridVisible=False,
             #horizontalHeaderFormat=QtWidgets.QCalendarWidget.SingleLetterDayNames,
             verticalHeaderFormat=QtWidgets.QCalendarWidget.NoVerticalHeader,
             navigationBarVisible=True,
             dateEditEnabled=True)       
+        self.controller = controller
         self.setEnabled(True)
         self.setGeometry(QtCore.QRect(0, 0, 320, 250))
         self.clicked.connect(print)
@@ -73,4 +74,11 @@ class MonthViewWidget(QCalendarWidget):
         d_start = QtCore.QDate(self.yearShown(), self.monthShown(), 1)
         d_end = QtCore.QDate(self.yearShown(), self.monthShown(), d_start.daysInMonth())
         if d_start <= date <= d_end:
-            super(MonthViewWidget, self).paintCell(painter, rect, date)
+            #super(MonthViewWidget, self).paintCell(painter, rect, date)
+            date_int = date.year() * 10000 + date.month() * 100 + date.day()
+            events = self.controller.get_events_within_timeframe(date_int, 1) # get all events on this day
+            if len(events) > 0:
+                painter.fillRect(rect, Qt.yellow)
+            painter.drawText(rect, Qt.AlignCenter, str(date.day()))
+
+            

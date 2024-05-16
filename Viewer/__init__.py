@@ -27,7 +27,7 @@ class Viewer(QWidget):
         self.create_search_layout(layout)
         self.create_table_widget()
 
-        self.month_view_widget = MonthViewWidget()
+        self.month_view_widget = MonthViewWidget(self.controller)
 
         self.stacked_widget = QStackedWidget()
         self.stacked_widget.addWidget(self.tableWidget)
@@ -57,16 +57,6 @@ class Viewer(QWidget):
         # Add the group box to the main layout and center it horizontally
         layout.addWidget(groupBox)
         layout.setAlignment(groupBox, Qt.AlignHCenter)
-
-
-
-        #hbox.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        #hbox.addWidget(self.radioBtnWeekly)
-        #hbox.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        #hbox.addWidget(self.radioBtnMonthly)
-        #layout.addLayout(hbox)
-
-        #self.stacked_widget.setCurrentIndex(1)
 
         self.add_event_button = QPushButton("Add Event")
         self.add_event_button.clicked.connect(self.open_add_event_window)
@@ -174,12 +164,16 @@ class Viewer(QWidget):
         if file_name: 
             try:
                 self.controller.import_schedule_from_json_file(file_name)
+                self.refresh_views()
             except Exception as e:
                 QMessageBox.warning(self, "Error", f'Failed to load schedule: {str(e)}')
 
     def write_schedule_dialog(self):
         dialog = WriteScheduleDialog(self)
         dialog.exec_()
+
+    def refresh_views(self):
+        self.month_view_widget.updateCells()
 
 class WriteScheduleDialog(QDialog):
     def __init__(self, parent=None):

@@ -1,1 +1,1 @@
-from .Task import Task, AntiTask, RecurringTask, TransientTask
+from .Task import Task, AntiTask, RecurringTask, TransientTask, Event
