@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSpacerItem,QSizePolicy, QGroupBox,
+    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QStackedWidget, QRadioButton
 )
 from PyQt5.QtCore import Qt
 from Viewer.AddEventWindow import AddEventWindow
@@ -8,6 +8,8 @@ import json
 from datetime import datetime
 from Controller import Controller
 from Task import Task, AntiTask, RecurringTask, TransientTask
+
+from .MonthView import MonthViewWidget
 
 class Viewer(QWidget):
     def __init__(self, controller: Controller):
@@ -23,7 +25,48 @@ class Viewer(QWidget):
         self.setLayout(layout)
 
         self.create_search_layout(layout)
-        self.create_table_widget(layout)
+        self.create_table_widget()
+
+        self.month_view_widget = MonthViewWidget()
+
+        self.stacked_widget = QStackedWidget()
+        self.stacked_widget.addWidget(self.tableWidget)
+        self.stacked_widget.addWidget(self.month_view_widget)
+
+        layout.addWidget(self.stacked_widget)
+
+        # radio buttons for choosing between Weekly view vs Monthly+Daily
+        groupBox = QGroupBox("Select View")
+        groupBox.setAlignment(Qt.AlignCenter)
+        groupBoxLayout = QHBoxLayout()
+
+        self.radioBtnWeekly = QRadioButton("Weekly View")
+        self.radioBtnMonthly = QRadioButton("Monthly && Daily View")
+
+        self.radioBtnWeekly.setChecked(True)
+
+        self.radioBtnWeekly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
+        self.radioBtnMonthly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
+
+        groupBoxLayout.addWidget(self.radioBtnWeekly)
+        groupBoxLayout.addWidget(self.radioBtnMonthly)
+
+         # Set the group box layout
+        groupBox.setLayout(groupBoxLayout)
+
+        # Add the group box to the main layout and center it horizontally
+        layout.addWidget(groupBox)
+        layout.setAlignment(groupBox, Qt.AlignHCenter)
+
+
+
+        #hbox.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        #hbox.addWidget(self.radioBtnWeekly)
+        #hbox.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        #hbox.addWidget(self.radioBtnMonthly)
+        #layout.addLayout(hbox)
+
+        #self.stacked_widget.setCurrentIndex(1)
 
         self.add_event_button = QPushButton("Add Event")
         self.add_event_button.clicked.connect(self.open_add_event_window)
@@ -55,7 +98,7 @@ class Viewer(QWidget):
         self.search_button.clicked.connect(self.search_task)
         search_layout.addWidget(self.search_button)
 
-    def create_table_widget(self, layout):
+    def create_table_widget(self):
         self.tableWidget = QTableWidget()
         self.tableWidget.setColumnCount(8)
         self.tableWidget.setHorizontalHeaderLabels(['Time Slot', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
@@ -63,9 +106,9 @@ class Viewer(QWidget):
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        layout.addWidget(self.tableWidget)
-
         self.populate_time_slots()
+
+        return self.tableWidget
 
     def populate_time_slots(self):
         hours = range(0, 24)
@@ -92,9 +135,6 @@ class Viewer(QWidget):
         task = self.controller.find_task_by_name(task_name)
         if task == None:
             QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
-        # Implement the logic to search for the task by name and display its information if found
-        # You can use the viewer to access the schedule data and search for the task by name
-        # Display the information using QMessageBox or any other appropriate widget
 
     def edit_event_details(self, row, column):
         item = self.tableWidget.item(row, column)
