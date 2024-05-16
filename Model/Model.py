@@ -97,12 +97,6 @@ class Model:
 
         return result
 
-
-
-
-
-
-
     
     def find_task_by_name(self, name: str) -> Task:
         for task in self.tasks:
@@ -175,3 +169,20 @@ class Model:
             # if theres an exception, restore the Model back to its previous state, and throw another exception for the calling function.
             self.tasks = tasks_backup
             raise ValueError("Tasks Overlap")
+        
+
+        # deletes a transient or recurring task object from Model
+        # return True if successful, otherwise raises LookupError
+        def delete_task(self, task_name: str):
+            for task in self.tasks:
+                if task.name == task_name:
+                    self.tasks.remove(task)
+                    return True
+            
+            raise LookupError("Task with specified name does not exist in model")
+        
+
+        # edits a recurring or transient task object in Model
+        def edit_task(self, task_name: str, task: Task):
+
+
