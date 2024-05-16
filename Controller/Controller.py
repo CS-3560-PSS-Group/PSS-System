@@ -5,7 +5,7 @@ from Task import Event
 import json
 
 def get_days_for_month(start_date):
-    
+    pass
 
 class Controller():
     def __init__(self):
