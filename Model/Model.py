@@ -46,7 +46,8 @@ class Model:
             self.tasks.append(task)
         return True
 
-    # assign anti_task to a specific instance of a recurring task, returns false 
+    # assign anti_task to first found compatible Recurring Task Object in Model
+    # return True on success, LookupError on failure
     def add_anti_task(self, anti_task: AntiTask): 
         # iterate all tasks for recurring tasks
         for existing_task in self.tasks:
@@ -97,19 +98,15 @@ class Model:
 
         return result
 
-
-
-
-
-
-
     
+    # returns recurring or transient task object by name
     def find_task_by_name(self, name: str) -> Task:
         for task in self.tasks:
             if task.name == name:
                 return task
         return None
     
+
     # return list of RecurringTask objects in model
     def get_recurring_tasks(self):
         rec_list = list()
@@ -142,10 +139,13 @@ class Model:
 
         return at_list
     
+
     # function that dumps the whole schedule to JSON. in other words, this dumped JSON can be imported later, to restore the exact state of the system.
     def dump_full_schedule_to_json(self) -> str:
         return json.dumps([task.to_dict() for task in self.tasks], indent=2)
     
+
+    # imports task list from valid json file
     def import_schedule_from_json(self, json_str: str):
         try:
             task_dict_list = json.loads(json_str)
@@ -175,3 +175,33 @@ class Model:
             # if theres an exception, restore the Model back to its previous state, and throw another exception for the calling function.
             self.tasks = tasks_backup
             raise ValueError("Tasks Overlap")
+        
+
+        # deletes a transient or recurring task object from Model
+        # return True if successful, otherwise raises LookupError
+        def delete_task(self, task_name: str):
+            task = self.find_task_by_name(task_name)
+            if task != None:
+                self.tasks.remove(task)
+                return True
+            
+            raise LookupError("Task with specified name does not exist in model")
+        
+
+        # edits a recurring or transient task object in Model
+        # parameters: task_name (string), task (new task object to replace specified task)
+        def edit_task(self, task_name: str, task: Task):
+
+            # identify task to be edited and raise error if does not exist in Model
+            target_task = self.find_task_by_name(task_name)
+            if target_task == None:
+                raise LookupError("Task with specified name does not exist in model")
+            
+            if not(type(target_task) is type(task)):
+                raise TypeError("New task does not match existing type")
+            
+            if type(target_task) is RecurringTask and type(task) is RecurringTask:
+                for atask in target_task.anti_tasks:
+                    task.add_anti_task()
+
+
