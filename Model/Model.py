@@ -177,31 +177,34 @@ class Model:
             raise ValueError("Tasks Overlap")
         
 
-        # deletes a transient or recurring task object from Model
-        # return True if successful, otherwise raises LookupError
-        def delete_task(self, task_name: str):
-            task = self.find_task_by_name(task_name)
-            if task != None:
-                self.tasks.remove(task)
-                return True
-            
-            raise LookupError("Task with specified name does not exist in model")
+    # deletes a transient or recurring task object from Model
+    # return True if successful, otherwise raises LookupError
+    def delete_task(self, task_name: str):
+        task = self.find_task_by_name(task_name)
+        if task != None:
+            self.tasks.remove(task)
+            return True
+        
+        raise LookupError("Task with specified name does not exist in model")
         
 
-        # edits a recurring or transient task object in Model
-        # parameters: task_name (string), task (new task object to replace specified task)
-        def edit_task(self, task_name: str, task: Task):
+    # edits a recurring or transient task object in Model
+    # parameters: task_name (string), task (new task object to replace specified task)
+    def edit_task(self, task_name: str, task: Task):
 
-            # identify task to be edited and raise error if does not exist in Model
-            target_task = self.find_task_by_name(task_name)
-            if target_task == None:
-                raise LookupError("Task with specified name does not exist in model")
-            
-            if not(type(target_task) is type(task)):
-                raise TypeError("New task does not match existing type")
-            
-            if type(target_task) is RecurringTask and type(task) is RecurringTask:
-                for atask in target_task.anti_tasks:
-                    task.add_anti_task()
+        # identify task to be edited and raise error if does not exist in Model
+        target_task = self.find_task_by_name(task_name)
+        if target_task == None:
+            raise LookupError("Task with specified name does not exist in model")
+        
+        if not(type(target_task) is type(task)):
+            raise TypeError("New task does not match existing type")
+        
+        # re-apply any applicable anti-tasks from original task to new one
+        if type(target_task) is RecurringTask and type(task) is RecurringTask:
+            for atask in target_task.anti_tasks:
+                if can_apply_anti_task(atask, task):
+                    task.add_anti_task(atask)
+                    atask.reference_task(task)
 
-
+        temp_list = self.tasks.copy()        
