@@ -358,6 +358,24 @@ class WriteScheduleDialog(QDialog):
         
         self.accept()
 
+def decimal_to_12hr(time_decimal):
+    hours = int(time_decimal)
+    minutes = int((time_decimal - hours) * 60)
+    
+    if hours == 0:
+        return "12:{:02d} AM".format(minutes)
+    elif hours < 12:
+        return "{:d}:{:02d} AM".format(hours, minutes)
+    elif hours == 12:
+        return "12:{:02d} PM".format(minutes)
+    else:
+        return "{:d}:{:02d} PM".format(hours - 12, minutes)
+
+def decimal_to_duration(time_decimal):
+    hours = int(time_decimal)
+    minutes = int((time_decimal - hours) * 60)
+    return "{:d}:{:02d}".format(hours, minutes)
+
 class ViewScheduleDialog(QDialog):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -447,8 +465,8 @@ class ScheduleDialog(QDialog):
             self.table_widget.setItem(row, 0, QTableWidgetItem(task.name))
             self.table_widget.setItem(row, 1, QTableWidgetItem(task.task_type))
             self.table_widget.setItem(row, 2, QTableWidgetItem(date_str)) 
-            self.table_widget.setItem(row, 3, QTableWidgetItem(str(event.start_time)))
-            self.table_widget.setItem(row, 4, QTableWidgetItem(str(event.duration)))
+            self.table_widget.setItem(row, 3, QTableWidgetItem(decimal_to_12hr(event.start_time)))
+            self.table_widget.setItem(row, 4, QTableWidgetItem(decimal_to_duration(event.duration)))
 
           # Set up the horizontal header
         header = self.table_widget.horizontalHeader()
