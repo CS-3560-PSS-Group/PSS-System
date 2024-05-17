@@ -185,7 +185,7 @@ class Viewer(QWidget):
         dialog.exec_()
 
     def refresh_views(self):
-        self.month_view_widget.updateCells()
+        self.month_view_widget.update_month_view()
 
 
 class MonthViewWidget(QWidget):
@@ -217,11 +217,51 @@ class MonthViewWidget(QWidget):
 
         layout.addLayout(date_selection_layout)
 
+
+        layout.setSpacing(20)  
+        # ==== Add Weekday Headers ====
+        layout.addStretch(1) # this fills up extra space on the top
+        self.weekday_headers_layout = QHBoxLayout()
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+        # add a label for each weekday
+        for day in days_of_week:  
+            label = QLabel(day)
+            label.setAlignment(Qt.AlignCenter)  # Center align the text
+            self.weekday_headers_layout.addWidget(label)
+        layout.addLayout(self.weekday_headers_layout)
+
         self.calendar_layout = QGridLayout()
         layout.addLayout(self.calendar_layout)
 
+
+        # ==== Add Previous/Next month buttons ==== 
+        month_button_layout = QHBoxLayout()
+        last_month_button = QPushButton('<- Previous Month', self)
+        next_month_button = QPushButton('Next Month ->', self)
+
+        last_month_button.clicked.connect(lambda: self.move_month(-1))
+        next_month_button.clicked.connect(lambda: self.move_month(1))
+
+        month_button_layout.addWidget(last_month_button)
+        month_button_layout.addStretch(1)
+        month_button_layout.addWidget(next_month_button)
+        layout.addLayout(month_button_layout)
+
+        layout.addStretch(1) # this fills up the space on the bottom 
+
+
         self.update_month_view()
 
+    # move forward or back (positive or negative)
+    def move_month(self, months_delta):
+        month_num = self.year_combo.currentIndex()*12 + self.month_combo.currentIndex() + months_delta
+        max_month_num = (self.year_combo.count()-1)*12 + 11
+
+        month_num = max(0, min(month_num, max_month_num)) # force month_num to be at least 0, and at most max_month_num
+        self.year_combo.setCurrentIndex(month_num//12)
+        self.month_combo.setCurrentIndex(month_num%12)
+        
     def update_month_view(self):
         # Clear the current calendar view
         for i in reversed(range(self.calendar_layout.count())): 
@@ -240,6 +280,9 @@ class MonthViewWidget(QWidget):
         for i in range(start_day_of_week - 1, start_day_of_week - 1 + days_in_month):
             date = QDate(year, month, day)
             day_button = QPushButton(str(day))
+            day_button.setMinimumHeight(60)
+            if len(self.controller.get_events_within_timeframe(date.year() * 10000 + date.month() * 100 + date.day(), 1)) > 0:
+                day_button.setStyleSheet("background-color: #ffff78")
             day_button.clicked.connect(lambda checked, date=date: self.view_tasks_for_date(date))
             self.calendar_layout.addWidget(day_button, i // 7, i % 7)
             day += 1
