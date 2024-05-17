@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, 
     QSpacerItem,QSizePolicy, QGroupBox, QDateEdit, QPushButton, QHeaderView, 
-    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,
+    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,QGridLayout,
     QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox, QFrame
 )
 from PyQt5.QtCore import Qt, QDateTime, QDate
+from PyQt5.QtGui import QFont
+
 from Viewer.AddEventWindow import AddEventWindow
 import json
 from datetime import datetime
@@ -184,6 +186,73 @@ class Viewer(QWidget):
 
     def refresh_views(self):
         self.month_view_widget.updateCells()
+
+
+class MonthViewWidget(QWidget):
+    def __init__(self, controller):
+        super().__init__()
+        self.controller = controller
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+
+        # Month and Year selection layout
+        date_selection_layout = QHBoxLayout()
+
+        self.month_combo = QComboBox()
+        self.month_combo.addItems(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+        self.month_combo.setCurrentIndex(QDate.currentDate().month() - 1)
+        self.month_combo.currentIndexChanged.connect(self.update_month_view)
+        
+        self.year_combo = QComboBox()
+        self.year_combo.addItems([str(year) for year in range(1900, 2101)])
+        self.year_combo.setCurrentText(str(QDate.currentDate().year()))
+        self.year_combo.currentIndexChanged.connect(self.update_month_view)
+
+        date_selection_layout.addWidget(QLabel("Select Month:"))
+        date_selection_layout.addWidget(self.month_combo)
+        date_selection_layout.addWidget(QLabel("Select Year:"))
+        date_selection_layout.addWidget(self.year_combo)
+
+        layout.addLayout(date_selection_layout)
+
+        self.calendar_layout = QGridLayout()
+        layout.addLayout(self.calendar_layout)
+
+        self.update_month_view()
+
+    def update_month_view(self):
+        # Clear the current calendar view
+        for i in reversed(range(self.calendar_layout.count())): 
+            widget = self.calendar_layout.itemAt(i).widget()
+            if widget is not None: 
+                widget.deleteLater()
+        
+        month = self.month_combo.currentIndex() + 1
+        year = int(self.year_combo.currentText())
+        first_day = QDate(year, month, 1)
+        start_day_of_week = first_day.dayOfWeek()
+        days_in_month = first_day.daysInMonth()
+
+        # Fill the calendar grid with days
+        day = 1
+        for i in range(start_day_of_week - 1, start_day_of_week - 1 + days_in_month):
+            date = QDate(year, month, day)
+            day_button = QPushButton(str(day))
+            day_button.clicked.connect(lambda checked, date=date: self.view_tasks_for_date(date))
+            self.calendar_layout.addWidget(day_button, i // 7, i % 7)
+            day += 1
+
+    def view_tasks_for_date(self, date):
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
+        task_list = self.controller.get_events_within_timeframe(date_int, 1)
+        if task_list:
+            dialog = ScheduleDialog(self)
+            dialog.set_schedule(task_list)
+            dialog.exec_()
+        else:
+            QMessageBox.information(self, "Schedule", "No tasks found.")
 
 class WriteScheduleDialog(QDialog):
     def __init__(self, parent, controller):
