@@ -1,25 +1,32 @@
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, 
-    QSpacerItem,QSizePolicy, QGroupBox, QDateEdit, QPushButton, QHeaderView, 
-    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,QGridLayout,
+    QSpacerItem, QSizePolicy, QGroupBox, QDateEdit, QPushButton, QHeaderView, 
+    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox, QGridLayout,
     QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox, QFrame
 )
 from PyQt5.QtCore import Qt, QDateTime, QDate
 from PyQt5.QtGui import QFont
 
 from Viewer.AddEventWindow import AddEventWindow
-import json
-from datetime import datetime
 from Controller import Controller
 from Task import Task, AntiTask, RecurringTask, TransientTask
 
+from Viewer.EditEventWindow import EditEventWindow
 from .MonthView import MonthViewWidget
+import json
+from datetime import datetime, timedelta
 
 class Viewer(QWidget):
     def __init__(self, controller: Controller):
         super().__init__()
         self.controller = controller
+        self.current_week_start = self.get_start_of_current_week()
         self.initUI()
+
+    def get_start_of_current_week(self):
+        today = QDate.currentDate()
+        start_of_week = today.addDays(-(today.dayOfWeek() - 1))
+        return start_of_week
 
     def initUI(self):
         self.setWindowTitle('PSS Schedule Viewer')
@@ -39,6 +46,17 @@ class Viewer(QWidget):
 
         layout.addWidget(self.stacked_widget)
 
+        self.week_nav_layout = QHBoxLayout()
+        self.prev_week_button = QPushButton("<- Previous Week")
+        self.next_week_button = QPushButton("Next Week ->")
+        self.prev_week_button.clicked.connect(lambda: self.move_week(-1))
+        self.next_week_button.clicked.connect(lambda: self.move_week(1))
+        
+        self.week_nav_layout.addWidget(self.prev_week_button)
+        self.week_nav_layout.addStretch()
+        self.week_nav_layout.addWidget(self.next_week_button)
+        layout.addLayout(self.week_nav_layout)
+
         # radio buttons for choosing between Weekly view vs Monthly+Daily
         groupBox = QGroupBox("Select View")
         groupBox.setAlignment(Qt.AlignCenter)
@@ -49,8 +67,8 @@ class Viewer(QWidget):
 
         self.radioBtnWeekly.setChecked(True)
 
-        self.radioBtnWeekly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
-        self.radioBtnMonthly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
+        self.radioBtnWeekly.clicked.connect(lambda: self.show_weekly_view())
+        self.radioBtnMonthly.clicked.connect(lambda: self.show_monthly_view())
 
         groupBoxLayout.addWidget(self.radioBtnWeekly)
         groupBoxLayout.addWidget(self.radioBtnMonthly)
@@ -84,6 +102,49 @@ class Viewer(QWidget):
 
         self.tableWidget.cellClicked.connect(self.edit_event_details)
 
+    def move_week(self, weeks_delta):
+        self.current_week_start = self.current_week_start.addDays(weeks_delta * 7)
+        self.populate_time_slots()
+
+    def refresh_views(self):
+        self.month_view_widget.update_month_view()
+        self.populate_time_slots()  # Refresh weekly view
+
+    def populate_time_slots(self):
+        self.tableWidget.clearContents()
+        hours = range(0, 24)
+        minutes = ['00', '15', '30', '45']
+        self.tableWidget.setRowCount(len(hours) * len(minutes))
+
+        for i, hour in enumerate(hours):
+            for j, minute in enumerate(minutes):
+                hour_12h = (hour % 12) or 12
+                am_pm = "AM" if hour < 12 else "PM"
+                item = QTableWidgetItem('{}:{:02d} {}'.format(hour_12h, int(minute), am_pm))
+                self.tableWidget.setItem(i * len(minutes) + j, 0, item)
+                self.tableWidget.setVerticalHeaderItem(i * len(minutes) + j, QTableWidgetItem(''))
+
+        start_of_week = self.current_week_start
+        for day_offset in range(7):
+            date = start_of_week.addDays(day_offset)
+            self.tableWidget.setHorizontalHeaderItem(day_offset + 1, QTableWidgetItem(date.toString("ddd MM/dd")))
+            date_int = date.year() * 10000 + date.month() * 100 + date.day()
+            task_list = self.controller.get_events_within_timeframe(date_int, 1)
+            for task in task_list:
+                self.add_task_to_table(task, day_offset)
+
+    def add_task_to_table(self, event, day_offset):
+        task = event.task
+        start_time_row = self.find_row_index(decimal_to_12hr(event.start_time))
+        duration_in_quarters = int(event.duration * 4)
+        column = day_offset + 1  # Monday is 1, Sunday is 7
+        for i in range(duration_in_quarters):
+            item = QTableWidgetItem(task.name)
+            item.setToolTip(f"{task.name}\n{decimal_to_12hr(event.start_time)} - {decimal_to_12hr(event.start_time + event.duration)}")
+            self.tableWidget.setItem(start_time_row + i, column, item)
+            if i == 0:
+                self.tableWidget.setSpan(start_time_row, column, duration_in_quarters, 1)
+
     def create_search_layout(self, parent_layout):
         search_layout = QHBoxLayout()
         parent_layout.addLayout(search_layout)
@@ -108,21 +169,8 @@ class Viewer(QWidget):
 
         return self.tableWidget
 
-    def populate_time_slots(self):
-        hours = range(0, 24)
-        minutes = ['00', '15', '30', '45']
-        self.tableWidget.setRowCount(len(hours) * len(minutes))
-
-        for i, hour in enumerate(hours):
-            for j, minute in enumerate(minutes):
-                hour_12h = (hour % 12) or 12
-                am_pm = "AM" if hour < 12 else "PM"
-                item = QTableWidgetItem('{}:{:02d} {}'.format(hour_12h, int(minute), am_pm))
-                self.tableWidget.setItem(i * len(minutes) + j, 0, item)
-                self.tableWidget.setVerticalHeaderItem(i * len(minutes) + j, QTableWidgetItem(''))
-
     def open_add_event_window(self):
-        add_event_window = AddEventWindow(self)
+        add_event_window = AddEventWindow(self, self.controller.model)
         add_event_window.exec_()
 
     def search_task(self):
@@ -141,9 +189,9 @@ class Viewer(QWidget):
             event_name = item.text()
             start_time_row = row // 4
             start_time = '{}:{} {}'.format((start_time_row % 12) or 12, (row % 4) * 15, 'AM' if start_time_row < 12 else 'PM')
-            end_time_row = (row + self.tableWidget.rowSpan(row, column) - 1) // 4
-            end_time = '{}:{} {}'.format((end_time_row % 12) or 12, (row % 4) * 15, 'AM' if end_time_row < 12 else 'PM')
-            color = item.background().color()
+            duration_in_quarters = self.tableWidget.rowSpan(row, column) or 1
+            end_time_row = start_time_row + duration_in_quarters
+            end_time = '{}:{} {}'.format((end_time_row % 12) or 12, (end_time_row % 4) * 15, 'AM' if end_time_row < 12 else 'PM')
             selected_day = self.tableWidget.horizontalHeaderItem(column).text()
             description = item.toolTip()
 
@@ -152,12 +200,12 @@ class Viewer(QWidget):
                 "start": start_time,
                 "end": end_time,
                 "description": description,
-                "color": color,
                 "selected_days": [selected_day]
             }
 
-            add_event_window = AddEventWindow(self, event_details)
-            add_event_window.exec_()
+            edit_event_window = EditEventWindow(self, self.controller.model, event_details)
+            edit_event_window.exec_()
+
 
     def export_schedule(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
@@ -184,9 +232,35 @@ class Viewer(QWidget):
         dialog = ViewScheduleDialog(self, self.controller)
         dialog.exec_()
 
-    def refresh_views(self):
-        self.month_view_widget.update_month_view()
+    def show_weekly_view(self):
+        self.stacked_widget.setCurrentIndex(0)
+        self.prev_week_button.setVisible(True)
+        self.next_week_button.setVisible(True)
 
+    def show_monthly_view(self):
+        self.stacked_widget.setCurrentIndex(1)
+        self.prev_week_button.setVisible(False)
+        self.next_week_button.setVisible(False)
+
+    def find_row_index(self, time_str):
+        time_format = "%I:%M %p"
+        time = datetime.strptime(time_str, time_format)
+        hour = time.hour
+        minute = time.minute
+        row_index = (hour * 4) + (minute // 15)
+        return row_index
+    
+    def add_task_to_table(self, event, day_offset):
+        task = event.task
+        start_time_row = self.find_row_index(decimal_to_12hr(event.start_time))
+        duration_in_quarters = int(event.duration * 4)
+        column = day_offset + 1  # Monday is 1, Sunday is 7
+        for i in range(duration_in_quarters):
+            item = QTableWidgetItem(task.name)
+            item.setToolTip(f"{task.name}\n{decimal_to_12hr(event.start_time)} - {decimal_to_12hr(event.start_time + event.duration)}")
+            self.tableWidget.setItem(start_time_row + i, column, item)
+            if i == 0:
+                self.tableWidget.setSpan(start_time_row, column, duration_in_quarters, 1)
 
 class MonthViewWidget(QWidget):
     def __init__(self, controller):
@@ -479,6 +553,7 @@ class ScheduleDialog(QDialog):
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
-    viewer = Viewer()
+    controller = Controller()
+    viewer = Viewer(controller)
     viewer.show()
     sys.exit(app.exec_())
