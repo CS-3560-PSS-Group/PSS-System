@@ -41,6 +41,7 @@ class AddEventWindow(QDialog):
         start_time = convert_to_decimal_time(start_time_str, am_pm)
         duration = float(self.duration_edit.text())
 
+        frequency = None
         if self.weekly_radio.isChecked():
             frequency = 7
         elif self.daily_radio.isChecked():

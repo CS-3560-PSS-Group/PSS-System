@@ -27,9 +27,29 @@ class EditEventWindow(QDialog):
         start_time_str, am_pm = self.event_details['start'].split()
         self.start_time_edit.setText(start_time_str)
         self.start_am_pm.setCurrentText(am_pm)
+        start_date = QDate.fromString(self.event_details['selected_days'][0], "ddd MM/dd")
+        self.beginning_date_edit.setDate(start_date)
+        print(self.event_details['end'].split()[0])
+        print(start_time_str)
         duration = float(self.event_details['end'].split()[0]) - float(start_time_str)
         self.duration_edit.setText(str(duration))
-        self.beginning_date_edit.setDate(QDate.fromString(self.event_details['selected_days'][0], "ddd MM/dd"))
+        
+        # Set the type radio button
+        event_type = self.event_details.get('description')
+        if event_type:
+            for button in self.type_radio_buttons.buttons():
+                if button.text() == event_type:
+                    button.setChecked(True)
+                    break
+
+        task_type = type(self.model.find_task_by_name(self.event_details['name']))
+        if task_type == RecurringTask:
+            self.recurring_radio.setChecked(True)
+        elif task_type == TransientTask:
+            self.transient_radio.setChecked(True)
+        elif task_type == AntiTask:
+            self.antitask_radio.setChecked(True)
+
 
     def update_event(self):
         def convert_to_decimal_time(time_str, am_pm):
