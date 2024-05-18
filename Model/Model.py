@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from Task.Task import Task, TransientTask, RecurringTask, AntiTask, Event
 
 
-from .CheckOverlap import check_overlap, can_apply_anti_task, get_datetime_from_date, get_datetime_from_datetime, get_datetime_from_dur
+from .CheckOverlap import check_overlap, can_apply_anti_task, get_datetime_from_date, get_datetime_from_datetime, get_datetime_from_dur, transient_datetimes_overlap
 
 # checks if two ranges overlap. start and end are both inclusive bounds. 
 def do_datetime_ranges_overap(start1: datetime, end1: datetime, start2: datetime, end2: datetime) -> bool:
@@ -182,6 +182,10 @@ class Model:
     def delete_task(self, task_name: str):
         task = self.find_task_by_name(task_name)
         if task != None:
+            # if anti task was in same spot as any transient task (the only case that needs to be checked for anti-task removal)
+            if type(task) is AntiTask and any(transient_datetimes_overlap(transient_task, task) for transient_task in self.get_transient_tasks()): 
+                raise ValueError("Anti Task is used by existing transient task")
+            
             self.tasks.remove(task)
             return True
         
