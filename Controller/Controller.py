@@ -1,6 +1,6 @@
 from Model import Model
 
-from Task import Event
+from Task import Task, Event
 
 import json
 
@@ -11,6 +11,10 @@ class Controller():
     def __init__(self):
         self.model = Model()
     
+    # Add any kind of task. Can be Recurring, Transient, or Anti
+    def add_task(self, task: Task):
+        self.model.add_task(task)
+
     def find_task_by_name(self, name: str):
         return self.model.find_task_by_name(name)
     
@@ -30,7 +34,7 @@ class Controller():
         elif schedule_type == 'Week':
             days = 7
         else:
-            days = 30# johnathans_function(start_date)
+            days = 30
 
         events = self.model.get_events_within_timeframe(start_date, days)
 
@@ -38,7 +42,11 @@ class Controller():
         with open(file_name, 'w') as file:
             file.write(json_str)
 
-            
+    def edit_task(self, task_name: str, task: Task):
+        self.model.edit_task(task_name, task)
+
+    def delete_task(self, task_name: str):
+        self.model.delete_task(task_name)
 
     def get_events_within_timeframe(self, start_date: int, days: int) -> list[Event]:
         return self.model.get_events_within_timeframe(start_date, days)

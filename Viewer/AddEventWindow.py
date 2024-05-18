@@ -5,13 +5,13 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QDate
 from datetime import datetime
-from Model.Model import TransientTask, RecurringTask, AntiTask  # Make sure to import the necessary task classes
+from Task import TransientTask, RecurringTask, AntiTask  # Make sure to import the necessary task classes
 
 class AddEventWindow(QDialog):
-    def __init__(self, viewer, model, event_details=None):
+    def __init__(self, viewer, controller, event_details=None):
         super().__init__()
         self.viewer = viewer
-        self.model = model
+        self.controller = controller
         self.event_details = event_details
 
         self.setWindowTitle("Add Event")
@@ -78,7 +78,7 @@ class AddEventWindow(QDialog):
 
         if task:
             try:
-                self.model.add_task(task)
+                self.controller.add_task(task)
                 self.viewer.refresh_views()
                 self.accept()
             except ValueError as e:

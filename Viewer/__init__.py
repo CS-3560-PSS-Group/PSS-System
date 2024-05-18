@@ -36,49 +36,11 @@ class Viewer(QWidget):
         self.setLayout(layout)
 
         self.create_search_layout(layout)
-        self.create_table_widget()
 
         self.month_view_widget = MonthViewWidget(self.controller)
 
-        self.stacked_widget = QStackedWidget()
-        self.stacked_widget.addWidget(self.tableWidget)
-        self.stacked_widget.addWidget(self.month_view_widget)
+        layout.addWidget(self.month_view_widget)
 
-        layout.addWidget(self.stacked_widget)
-
-        self.week_nav_layout = QHBoxLayout()
-        self.prev_week_button = QPushButton("<- Previous Week")
-        self.next_week_button = QPushButton("Next Week ->")
-        self.prev_week_button.clicked.connect(lambda: self.move_week(-1))
-        self.next_week_button.clicked.connect(lambda: self.move_week(1))
-        
-        self.week_nav_layout.addWidget(self.prev_week_button)
-        self.week_nav_layout.addStretch()
-        self.week_nav_layout.addWidget(self.next_week_button)
-        layout.addLayout(self.week_nav_layout)
-
-        # radio buttons for choosing between Weekly view vs Monthly+Daily
-        groupBox = QGroupBox("Select View")
-        groupBox.setAlignment(Qt.AlignCenter)
-        groupBoxLayout = QHBoxLayout()
-
-        self.radioBtnWeekly = QRadioButton("Weekly View")
-        self.radioBtnMonthly = QRadioButton("Monthly && Daily View")
-
-        self.radioBtnWeekly.setChecked(True)
-
-        self.radioBtnWeekly.clicked.connect(lambda: self.show_weekly_view())
-        self.radioBtnMonthly.clicked.connect(lambda: self.show_monthly_view())
-
-        groupBoxLayout.addWidget(self.radioBtnWeekly)
-        groupBoxLayout.addWidget(self.radioBtnMonthly)
-
-        # Set the group box layout
-        groupBox.setLayout(groupBoxLayout)
-
-        # Add the group box to the main layout and center it horizontally
-        layout.addWidget(groupBox)
-        layout.setAlignment(groupBox, Qt.AlignHCenter)
 
         self.add_event_button = QPushButton("Add Event")
         self.add_event_button.clicked.connect(self.open_add_event_window)
@@ -100,50 +62,9 @@ class Viewer(QWidget):
         self.view_schedule_button.clicked.connect(self.view_schedule_dialog)
         layout.addWidget(self.view_schedule_button)
 
-        self.tableWidget.cellClicked.connect(self.edit_event_details)
-
-    def move_week(self, weeks_delta):
-        self.current_week_start = self.current_week_start.addDays(weeks_delta * 7)
-        self.populate_time_slots()
 
     def refresh_views(self):
         self.month_view_widget.update_month_view()
-        self.populate_time_slots()  # Refresh weekly view
-
-    def populate_time_slots(self):
-        self.tableWidget.clearContents()
-        hours = range(0, 24)
-        minutes = ['00', '15', '30', '45']
-        self.tableWidget.setRowCount(len(hours) * len(minutes))
-
-        for i, hour in enumerate(hours):
-            for j, minute in enumerate(minutes):
-                hour_12h = (hour % 12) or 12
-                am_pm = "AM" if hour < 12 else "PM"
-                item = QTableWidgetItem('{}:{:02d} {}'.format(hour_12h, int(minute), am_pm))
-                self.tableWidget.setItem(i * len(minutes) + j, 0, item)
-                self.tableWidget.setVerticalHeaderItem(i * len(minutes) + j, QTableWidgetItem(''))
-
-        start_of_week = self.current_week_start
-        for day_offset in range(7):
-            date = start_of_week.addDays(day_offset)
-            self.tableWidget.setHorizontalHeaderItem(day_offset + 1, QTableWidgetItem(date.toString("ddd MM/dd")))
-            date_int = date.year() * 10000 + date.month() * 100 + date.day()
-            task_list = self.controller.get_events_within_timeframe(date_int, 1)
-            for task in task_list:
-                self.add_task_to_table(task, day_offset)
-
-    def add_task_to_table(self, event, day_offset):
-        task = event.task
-        start_time_row = self.find_row_index(decimal_to_12hr(event.start_time))
-        duration_in_quarters = int(event.duration * 4)
-        column = day_offset + 1  # Monday is 1, Sunday is 7
-        for i in range(duration_in_quarters):
-            item = QTableWidgetItem(task.name)
-            item.setToolTip(f"{task.name}\n{decimal_to_12hr(event.start_time)} - {decimal_to_12hr(event.start_time + event.duration)}")
-            self.tableWidget.setItem(start_time_row + i, column, item)
-            if i == 0:
-                self.tableWidget.setSpan(start_time_row, column, duration_in_quarters, 1)
 
     def create_search_layout(self, parent_layout):
         search_layout = QHBoxLayout()
@@ -157,21 +78,23 @@ class Viewer(QWidget):
         self.search_button.clicked.connect(self.search_task)
         search_layout.addWidget(self.search_button)
 
-    def create_table_widget(self):
-        self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(8)
-        self.tableWidget.setHorizontalHeaderLabels(['Time Slot', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
 
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        self.populate_time_slots()
-
-        return self.tableWidget
 
     def open_add_event_window(self):
-        add_event_window = AddEventWindow(self, self.controller.model)
+        add_event_window = AddEventWindow(self, self.controller)
         add_event_window.exec_()
+
+    def show_edit_event_window(self, task):
+        event_details = {
+            "name": task.name,
+            "start": task.start_time,
+            "end": str(task.duration),  # Ensure duration is a string
+            "description": task.task_type,
+            "selected_days": [task.frequency]
+        }
+        edit_event_window = EditEventWindow(self, self.controller, event_details)
+        edit_event_window.exec_()
+
 
     def search_task(self):
         task_name = self.search_input.text()
@@ -181,42 +104,8 @@ class Viewer(QWidget):
         task = self.controller.find_task_by_name(task_name)
         if task == None:
             QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
-
-    def edit_event_details(self, row, column):
-        def convert_to_decimal_time(time_str, am_pm):
-            time_format = "%I:%M"
-            time_obj = datetime.strptime(time_str, time_format)
-            hours = time_obj.hour
-            if am_pm == "PM" and hours != 12:
-                hours += 12
-            elif am_pm == "AM" and hours == 12:
-                hours = 0
-            return hours + time_obj.minute / 60.0
-
-        item = self.tableWidget.item(row, column)
-
-        if item is not None and item.text():
-            event_name = item.text()
-            start_time_row = row // 4
-            start_time = '{}:{} {}'.format((start_time_row % 12) or 12, (row % 4) * 15, 'AM' if start_time_row < 12 else 'PM')
-            duration_in_quarters = self.tableWidget.rowSpan(row, column) or 1
-            duration = duration_in_quarters * 0.25  # Duration in hours
-
-            selected_day = self.tableWidget.horizontalHeaderItem(column).text()
-            description = item.toolTip()
-
-            event_details = {
-                "name": event_name,
-                "start": start_time,
-                "end": duration,  # Ensure duration is a string
-                "description": description,
-                "selected_days": [selected_day]
-            }
-
-            edit_event_window = EditEventWindow(self, self.controller.model, event_details)
-            edit_event_window.exec_()
-
-
+        else:
+            pass
 
     def export_schedule(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
@@ -243,35 +132,6 @@ class Viewer(QWidget):
         dialog = ViewScheduleDialog(self, self.controller)
         dialog.exec_()
 
-    def show_weekly_view(self):
-        self.stacked_widget.setCurrentIndex(0)
-        self.prev_week_button.setVisible(True)
-        self.next_week_button.setVisible(True)
-
-    def show_monthly_view(self):
-        self.stacked_widget.setCurrentIndex(1)
-        self.prev_week_button.setVisible(False)
-        self.next_week_button.setVisible(False)
-
-    def find_row_index(self, time_str):
-        time_format = "%I:%M %p"
-        time = datetime.strptime(time_str, time_format)
-        hour = time.hour
-        minute = time.minute
-        row_index = (hour * 4) + (minute // 15)
-        return row_index
-    
-    def add_task_to_table(self, event, day_offset):
-        task = event.task
-        start_time_row = self.find_row_index(decimal_to_12hr(event.start_time))
-        duration_in_quarters = int(event.duration * 4)
-        column = day_offset + 1  # Monday is 1, Sunday is 7
-        for i in range(duration_in_quarters):
-            item = QTableWidgetItem(task.name)
-            item.setToolTip(f"{task.name}\n{decimal_to_12hr(event.start_time)} - {decimal_to_12hr(event.start_time + event.duration)}")
-            self.tableWidget.setItem(start_time_row + i, column, item)
-            if i == 0:
-                self.tableWidget.setSpan(start_time_row, column, duration_in_quarters, 1)
 
 class MonthViewWidget(QWidget):
     def __init__(self, controller):

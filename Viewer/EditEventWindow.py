@@ -5,13 +5,13 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QDate
 from datetime import datetime
-from Model.Model import TransientTask, RecurringTask, AntiTask  # Make sure to import the necessary task classes
+from Task import TransientTask, RecurringTask, AntiTask  # Make sure to import the necessary task classes
 
 class EditEventWindow(QDialog):
-    def __init__(self, viewer, model, event_details=None):
+    def __init__(self, viewer, controller, event_details=None):
         super().__init__()
         self.viewer = viewer
-        self.model = model
+        self.controller = controller
         self.event_details = event_details
 
         self.setWindowTitle("Edit Task")
@@ -206,7 +206,7 @@ class EditEventWindow(QDialog):
                     button.setChecked(True)
                     break
 
-        task_type = type(self.model.find_task_by_name(self.event_details['name']))
+        task_type = type(self.controller.find_task_by_name(self.event_details['name']))
         if task_type == RecurringTask:
             self.recurring_radio.setChecked(True)
             self.show_recurring_options()
@@ -237,7 +237,7 @@ class EditEventWindow(QDialog):
         start_time = convert_to_decimal_time(start_time_str, am_pm)
         duration = float(self.duration_edit.text())
 
-        task = self.model.find_task_by_name(self.event_details['name'])
+        task = self.controller.find_task_by_name(self.event_details['name'])
         task_type = type(task)
 
         if task_type == RecurringTask:
@@ -268,7 +268,7 @@ class EditEventWindow(QDialog):
             )
 
         try:
-            self.model.edit_task(self.event_details['name'], new_task)
+            self.controller.edit_task(self.event_details['name'], new_task)
             self.viewer.refresh_views()
             self.accept()
         except ValueError as e:
@@ -277,7 +277,7 @@ class EditEventWindow(QDialog):
     def delete_event(self):
         event_name = self.event_details['name']
         try:
-            self.model.delete_task(event_name)
+            self.controller.delete_task(event_name)
             self.viewer.refresh_views()
             
             self.accept()
