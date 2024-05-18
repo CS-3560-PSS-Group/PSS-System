@@ -4,8 +4,10 @@ from PyQt5.QtWidgets import (
     QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,QGridLayout,
     QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox, QFrame
 )
-from PyQt5.QtCore import Qt
-from .AddEventWindow import AddEventWindow  # Use relative import
+from PyQt5.QtCore import Qt, QDateTime, QDate
+from PyQt5.QtGui import QFont
+
+from Viewer.AddEventWindow import AddEventWindow
 import json
 from datetime import datetime
 from Controller import Controller
@@ -27,9 +29,40 @@ class Viewer(QWidget):
         self.setLayout(layout)
 
         self.create_search_layout(layout)
-        self.create_table_widget(layout)
+        self.create_table_widget()
 
-        self.add_event_button = QPushButton("Add Task")
+        self.month_view_widget = MonthViewWidget(self.controller)
+
+        self.stacked_widget = QStackedWidget()
+        self.stacked_widget.addWidget(self.tableWidget)
+        self.stacked_widget.addWidget(self.month_view_widget)
+
+        layout.addWidget(self.stacked_widget)
+
+        # radio buttons for choosing between Weekly view vs Monthly+Daily
+        groupBox = QGroupBox("Select View")
+        groupBox.setAlignment(Qt.AlignCenter)
+        groupBoxLayout = QHBoxLayout()
+
+        self.radioBtnWeekly = QRadioButton("Weekly View")
+        self.radioBtnMonthly = QRadioButton("Monthly && Daily View")
+
+        self.radioBtnWeekly.setChecked(True)
+
+        self.radioBtnWeekly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
+        self.radioBtnMonthly.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
+
+        groupBoxLayout.addWidget(self.radioBtnWeekly)
+        groupBoxLayout.addWidget(self.radioBtnMonthly)
+
+        # Set the group box layout
+        groupBox.setLayout(groupBoxLayout)
+
+        # Add the group box to the main layout and center it horizontally
+        layout.addWidget(groupBox)
+        layout.setAlignment(groupBox, Qt.AlignHCenter)
+
+        self.add_event_button = QPushButton("Add Event")
         self.add_event_button.clicked.connect(self.open_add_event_window)
         layout.addWidget(self.add_event_button)
 
@@ -63,19 +96,7 @@ class Viewer(QWidget):
         self.search_button.clicked.connect(self.search_task)
         search_layout.addWidget(self.search_button)
 
-    def search_task(self):
-        task_name = self.search_input.text()
-        if not task_name:
-            QMessageBox.warning(self, "Error", "Please enter a task name to search.")
-            return
-        task = self.controller.find_task_by_name(task_name)
-        if task is None:
-            QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
-        # Implement the logic to search for the task by name and display its information if found
-        # You can use the viewer to access the schedule data and search for the task by name
-        # Display the information using QMessageBox or any other appropriate widget
-
-    def create_table_widget(self, layout):
+    def create_table_widget(self):
         self.tableWidget = QTableWidget()
         self.tableWidget.setColumnCount(8)
         self.tableWidget.setHorizontalHeaderLabels(['Time Slot', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
@@ -103,6 +124,15 @@ class Viewer(QWidget):
     def open_add_event_window(self):
         add_event_window = AddEventWindow(self)
         add_event_window.exec_()
+
+    def search_task(self):
+        task_name = self.search_input.text()
+        if not task_name:
+            QMessageBox.warning(self, "Error", "Please enter a task name to search.")
+            return
+        task = self.controller.find_task_by_name(task_name)
+        if task == None:
+            QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
 
     def edit_event_details(self, row, column):
         item = self.tableWidget.item(row, column)
@@ -139,7 +169,7 @@ class Viewer(QWidget):
 
     def load_schedule(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Schedule", "", "JSON Files (*.json)")
-        if file_name:
+        if file_name: 
             try:
                 self.controller.import_schedule_from_json_file(file_name)
                 self.refresh_views()
@@ -327,3 +357,128 @@ class WriteScheduleDialog(QDialog):
         self.controller.write_schedule(file_name, date_int, schedule_type)
         
         self.accept()
+
+def decimal_to_12hr(time_decimal):
+    hours = int(time_decimal)
+    minutes = int((time_decimal - hours) * 60)
+    
+    if hours == 0:
+        return "12:{:02d} AM".format(minutes)
+    elif hours < 12:
+        return "{:d}:{:02d} AM".format(hours, minutes)
+    elif hours == 12:
+        return "12:{:02d} PM".format(minutes)
+    else:
+        return "{:d}:{:02d} PM".format(hours - 12, minutes)
+
+def decimal_to_duration(time_decimal):
+    hours = int(time_decimal)
+    minutes = int((time_decimal - hours) * 60)
+    return "{:d}:{:02d}".format(hours, minutes)
+
+class ViewScheduleDialog(QDialog):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.setWindowTitle("View Schedule")
+        self.setGeometry(200, 200, 300, 200)
+
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Start Date:"))
+
+        self.dateedit = QDateEdit(calendarPopup=True)
+        layout.addWidget(self.dateedit)
+        self.dateedit.setDateTime(QDateTime.currentDateTime())
+
+        self.schedule_type_combo = QComboBox()
+        self.schedule_type_combo.addItems(["Day", "Week", "Month"])
+        layout.addWidget(QLabel("Select Schedule Type:"))
+        layout.addWidget(self.schedule_type_combo)
+
+        button_layout = QHBoxLayout()
+        self.view_schedule_button = QPushButton("View")
+        self.cancel_button = QPushButton("Cancel")
+        button_layout.addWidget(self.view_schedule_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        self.view_schedule_button.clicked.connect(self.view_schedule)
+        self.cancel_button.clicked.connect(self.reject)
+
+        self.setLayout(layout)
+
+    def view_schedule(self):
+        schedule_type = self.schedule_type_combo.currentText()
+        date = self.dateedit.date()
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
+
+        if schedule_type == "Day":
+            timeframe = 1
+        elif schedule_type == "Week":
+            timeframe = 7
+        elif schedule_type == "Month":
+            timeframe = 30
+        else:
+            timeframe = 1  # Default to day if the schedule type is not recognized
+
+        task_list = self.controller.get_events_within_timeframe(date_int, timeframe)
+        if task_list:
+            dialog = ScheduleDialog(self)
+            dialog.set_schedule(task_list)
+            dialog.exec_()
+        else:
+            QMessageBox.information(self, "Schedule", "No tasks found.")
+
+class ScheduleDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Schedule")
+        self.setGeometry(200, 200, 600, 400)
+
+        layout = QVBoxLayout(self)
+
+        # Create a table widget
+        self.table_widget = QTableWidget()
+        layout.addWidget(self.table_widget)
+
+        # Set table properties
+        self.table_widget.setColumnCount(5)  # Number of columns
+        self.table_widget.setHorizontalHeaderLabels(["Name", "Type", "Date", "Start Time", "Duration"])
+
+        # Set up the horizontal header
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
+
+        # Create buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+        layout.addWidget(button_box)
+
+    def set_schedule(self, task_list):
+        self.table_widget.setRowCount(len(task_list))
+        
+        for row, event in enumerate(task_list):
+            task = event.task
+            date_str = QDate.fromString(str(event.start_date), "yyyyMMdd").toString("MM/dd/yyyy")  # Convert date to MM/DD/YYYY format
+            self.table_widget.setItem(row, 0, QTableWidgetItem(task.name))
+            self.table_widget.setItem(row, 1, QTableWidgetItem(task.task_type))
+            self.table_widget.setItem(row, 2, QTableWidgetItem(date_str)) 
+            self.table_widget.setItem(row, 3, QTableWidgetItem(decimal_to_12hr(event.start_time)))
+            self.table_widget.setItem(row, 4, QTableWidgetItem(decimal_to_duration(event.duration)))
+
+          # Set up the horizontal header
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        
+        # Add style sheet to create a line under the header
+        header.setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
+
+
+if __name__ == '__main__':
+    import sys
+    app = QApplication(sys.argv)
+    viewer = Viewer()
+    viewer.show()
+    sys.exit(app.exec_())
