@@ -183,6 +183,16 @@ class Viewer(QWidget):
             QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
 
     def edit_event_details(self, row, column):
+        def convert_to_decimal_time(time_str, am_pm):
+            time_format = "%I:%M"
+            time_obj = datetime.strptime(time_str, time_format)
+            hours = time_obj.hour
+            if am_pm == "PM" and hours != 12:
+                hours += 12
+            elif am_pm == "AM" and hours == 12:
+                hours = 0
+            return hours + time_obj.minute / 60.0
+
         item = self.tableWidget.item(row, column)
 
         if item is not None and item.text():
@@ -190,21 +200,22 @@ class Viewer(QWidget):
             start_time_row = row // 4
             start_time = '{}:{} {}'.format((start_time_row % 12) or 12, (row % 4) * 15, 'AM' if start_time_row < 12 else 'PM')
             duration_in_quarters = self.tableWidget.rowSpan(row, column) or 1
-            end_time_row = start_time_row + duration_in_quarters
-            end_time = '{}:{} {}'.format((end_time_row % 12) or 12, (end_time_row % 4) * 15, 'AM' if end_time_row < 12 else 'PM')
+            duration = duration_in_quarters * 0.25  # Duration in hours
+
             selected_day = self.tableWidget.horizontalHeaderItem(column).text()
             description = item.toolTip()
 
             event_details = {
                 "name": event_name,
                 "start": start_time,
-                "end": end_time,
+                "end": duration,  # Ensure duration is a string
                 "description": description,
                 "selected_days": [selected_day]
             }
 
             edit_event_window = EditEventWindow(self, self.controller.model, event_details)
             edit_event_window.exec_()
+
 
 
     def export_schedule(self):

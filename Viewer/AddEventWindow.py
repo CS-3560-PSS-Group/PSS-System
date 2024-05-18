@@ -47,6 +47,7 @@ class AddEventWindow(QDialog):
         elif self.daily_radio.isChecked():
             frequency = 1
 
+
         task_type = None
         if self.recurring_radio.isChecked():
             task_type = "Recurring"
