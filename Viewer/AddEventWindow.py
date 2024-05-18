@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QButtonGroup, QComboBox,
-    QDateEdit, QPushButton, QTableWidgetItem, QMessageBox
+    QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
+    QPushButton, QLineEdit, QHeaderView, QLabel, QComboBox, QHBoxLayout,
+    QDialog, QMessageBox, QDateEdit, QRadioButton, QButtonGroup
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDate
 from datetime import datetime
 
 class AddEventWindow(QDialog):
@@ -25,18 +26,21 @@ class AddEventWindow(QDialog):
         end_time = self.end_time_edit.text() + " " + self.end_am_pm.currentText()
         event_type = [radio.text() for radio in self.type_radio_buttons.buttons() if radio.isChecked()]
 
-        if self.recurring_radio.isChecked():
+        if self.daily_radio.isChecked():
             selected_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         else:
             selected_days = [radio.text() for radio in self.days_radios if radio.isChecked()]
 
+
         if self.recurring_radio.isChecked():
-            task_type = "Recurring"
+            task_type = self.recurring_radio.isChecked()
         elif self.transient_radio.isChecked():
-            task_type = "Transient"
+            task_type = self.transient_radio.isChecked()
             selected_days = [radio.text() for radio in self.days_radios if radio.isChecked()]
+
         elif self.antitask_radio.isChecked():
-            task_type = "Antitask"
+            task_type = self.antitask_radio.isChecked()
+            print('antitask')
 
         new_event = {
             "name": event_name,
@@ -65,6 +69,15 @@ class AddEventWindow(QDialog):
         for day in selected_days:
             column_index = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].index(day) + 1
             for row in range(start_row_index, end_row_index + 1):
+                start_item = self.viewer.tableWidget.verticalHeaderItem(row)
+                if not start_item:
+                    start_item = QTableWidgetItem(start_time)
+                    self.viewer.tableWidget.setVerticalHeaderItem(row, start_item)
+                end_item = self.viewer.tableWidget.verticalHeaderItem(row + (end_row_index - start_row_index))
+                if not end_item:
+                    end_item = QTableWidgetItem(end_time)
+                    self.viewer.tableWidget.setVerticalHeaderItem(row + (end_row_index - start_row_index), end_item)
+
                 item = QTableWidgetItem(event_name)
                 item.setTextAlignment(Qt.AlignTop)
                 tooltip = f"{event_name}\n{start_time} - {end_time}\nType: {new_event['task_type']} - {new_event['type']}"
@@ -181,9 +194,7 @@ class AddEventWindow(QDialog):
                     radio.hide()
                     radio.setChecked(False)
             elif sender == self.transient_radio:
-                self.days_label.show()
-                for radio in self.days_radios:
-                    radio.show()
+                self.toggle_days_visibility(False)
             elif sender == self.antitask_radio:
                 pass
             elif sender == self.daily_radio or sender == self.weekly_radio:
@@ -225,9 +236,9 @@ class AddEventWindow(QDialog):
 
     def toggle_days_visibility(self, checked):
         if checked:
-            self.days_label.show()
+            self.days_label.hide()
             for radio in self.days_radios:
-                radio.show()
+                radio.hide()
             self.show_transient_types()
         else:
             if self.weekly_radio.isChecked():
@@ -330,9 +341,6 @@ class AddEventWindow(QDialog):
             return False
         if not self.is_valid_time(start_time) or not self.is_valid_time(end_time):
             QMessageBox.warning(self, "Error", "Invalid time format. Please enter time in HH:MM AM/PM format.")
-            return False
-        if self.transient_radio.isChecked() and not selected_days:
-            QMessageBox.warning(self, "Error", "Select a day for the transient task.")
             return False
         return True
 
