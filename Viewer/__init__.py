@@ -16,9 +16,15 @@ from .MonthView import MonthViewWidget
 import json
 from datetime import datetime, timedelta
 
+from .TaskAttributesWindows import show_task_attributes_dialog
+
+viewer = None
+
 class Viewer(QWidget):
     def __init__(self, controller: Controller):
         super().__init__()
+        global viewer
+        viewer = self
         self.controller = controller
         self.current_week_start = self.get_start_of_current_week()
         self.initUI()
@@ -43,7 +49,7 @@ class Viewer(QWidget):
 
 
         self.add_event_button = QPushButton("Add Event")
-        self.add_event_button.clicked.connect(self.open_add_event_window)
+        self.add_event_button.clicked.connect(lambda: show_task_attributes_dialog(None, self.controller, self))
         layout.addWidget(self.add_event_button)
 
         self.export_button = QPushButton("Export Schedule")
@@ -61,6 +67,9 @@ class Viewer(QWidget):
         self.view_schedule_button = QPushButton("View Schedule")
         self.view_schedule_button.clicked.connect(self.view_schedule_dialog)
         layout.addWidget(self.view_schedule_button)
+
+        #show_task_attributes_dialog(None, self.controller)
+        #sys.exit()
 
 
     def refresh_views(self):
@@ -85,12 +94,15 @@ class Viewer(QWidget):
         add_event_window.exec_()
 
     def show_edit_event_window(self, task):
+        freq = 1
+        if type(task) is RecurringTask:
+            freq = task.frequency
         event_details = {
             "name": task.name,
-            "start": task.start_time,
+            "start": decimal_to_12hr(task.start_time),
             "end": str(task.duration),  # Ensure duration is a string
             "description": task.task_type,
-            "selected_days": [task.frequency]
+            "selected_days": [freq]
         }
         edit_event_window = EditEventWindow(self, self.controller, event_details)
         edit_event_window.exec_()
@@ -105,7 +117,7 @@ class Viewer(QWidget):
         if task == None:
             QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
         else:
-            pass
+            show_task_attributes_dialog(task, self.controller, self)
 
     def export_schedule(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Schedule", "", "Text Files (*.txt)")
@@ -402,16 +414,26 @@ class ScheduleDialog(QDialog):
         layout.addWidget(button_box)
 
     def set_schedule(self, task_list):
+        self.task_list = task_list 
         self.table_widget.setRowCount(len(task_list))
-        
+        self.table_widget.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table_widget.itemClicked.connect(self.item_clicked)
+
+
         for row, event in enumerate(task_list):
             task = event.task
             date_str = QDate.fromString(str(event.start_date), "yyyyMMdd").toString("MM/dd/yyyy")  # Convert date to MM/DD/YYYY format
-            self.table_widget.setItem(row, 0, QTableWidgetItem(task.name))
-            self.table_widget.setItem(row, 1, QTableWidgetItem(task.task_type))
-            self.table_widget.setItem(row, 2, QTableWidgetItem(date_str)) 
-            self.table_widget.setItem(row, 3, QTableWidgetItem(decimal_to_12hr(event.start_time)))
-            self.table_widget.setItem(row, 4, QTableWidgetItem(decimal_to_duration(event.duration)))
+            values  =[task.name, task.task_type, date_str, decimal_to_12hr(event.start_time), decimal_to_duration(event.duration)]
+            for col in range(len(values)):
+                item = QTableWidgetItem(values[col])
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)  
+                #item.setCursor(Qt.PointingHandCursor)  # Set cursor to pointing hand
+                self.table_widget.setItem(row, col, item)
+            #self.table_widget.setItem(row, 0, QTableWidgetItem(task.name))
+            #self.table_widget.setItem(row, 1, QTableWidgetItem(task.task_type))
+            #self.table_widget.setItem(row, 2, QTableWidgetItem(date_str)) 
+            #self.table_widget.setItem(row, 3, QTableWidgetItem())
+            #self.table_widget.setItem(row, 4, QTableWidgetItem())
 
           # Set up the horizontal header
         header = self.table_widget.horizontalHeader()
@@ -419,6 +441,10 @@ class ScheduleDialog(QDialog):
         
         # Add style sheet to create a line under the header
         header.setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
+
+    def item_clicked(self, item):
+        show_task_attributes_dialog(self.task_list[item.row()].task, viewer.controller, viewer)
+
 
 
 if __name__ == '__main__':

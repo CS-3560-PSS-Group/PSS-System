@@ -4,8 +4,8 @@ class Task:
     def __init__(self, name: str, task_type: str, start_date: int, start_time: float, duration: float):
         self.name = name
         self.task_type = task_type
-        self.start_time = start_time
-        self.duration = duration
+        self.start_time = round(start_time / 0.25) * 0.25  # round the numbers to the nearest 0.25
+        self.duration = round(duration / 0.25) * 0.25 
         self.start_date = start_date
 
         # Validate values
@@ -14,7 +14,7 @@ class Task:
 
         if self.duration < 0.25 or self.duration > 23.75:
             raise ValueError("Duration must be between 0.25 and 23.75")
-    
+
     # return it as a dictionary, which can then be used for JSON
     def to_dict(self):
         d = {
