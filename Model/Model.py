@@ -1,13 +1,23 @@
 import json 
 from datetime import datetime, timedelta
 
-from Task.Task import Task, TransientTask, RecurringTask, AntiTask
+from Task.Task import Task, TransientTask, RecurringTask, AntiTask, Event
 
 
-from .CheckOverlap import check_overlap, can_apply_anti_task
+from .CheckOverlap import check_overlap, can_apply_anti_task, get_datetime_from_date, get_datetime_from_datetime, get_datetime_from_dur, transient_datetimes_overlap
 
-# Not even god can help me refactor this code
+# checks if two ranges overlap. start and end are both inclusive bounds. 
+def do_datetime_ranges_overap(start1: datetime, end1: datetime, start2: datetime, end2: datetime) -> bool:
+    return (start1 <= end2) and (end1 >= start2)
 
+def get_date_and_time_from_datetime(dt):
+    # Extract date components
+    date_int = int(dt.strftime("%Y%m%d"))
+
+    # Calculate time in decimal hours
+    time_float = dt.hour + dt.minute / 60 + dt.second / 3600
+
+    return date_int, time_float
 
 class Model:
     def __init__(self):
@@ -36,7 +46,8 @@ class Model:
             self.tasks.append(task)
         return True
 
-    # assign anti_task to a specific instance of a recurring task, returns false 
+    # assign anti_task to first found compatible Recurring Task Object in Model
+    # return True on success, LookupError on failure
     def add_anti_task(self, anti_task: AntiTask): 
         # iterate all tasks for recurring tasks
         for existing_task in self.tasks:
@@ -50,15 +61,52 @@ class Model:
         raise LookupError('Error: AntiTask does not apply to any existing recurring task')
 
 
-    def get_week_schedule(self, week_start_date):
-        pass
+    # this function will get all the Events that occur from the start_date to the end_date, exclusive. No specific times, just the whole day as a boundary.
+    def get_events_within_timeframe(self, start_date: int, days: int) -> list[Event]:
+        result = []
+
+        start_datetime = get_datetime_from_date(start_date)
+        end_datetime = start_datetime + timedelta(days = (days-1), hours = 23, minutes = 45)  # making inclusive end_datetime. this is the last timestamap of the timeframe.
+
+        for task in self.tasks:
+            if type(task) is TransientTask:
+                begin = get_datetime_from_datetime(task.start_date, task.start_time)
+                end = get_datetime_from_dur(begin, task.duration)
+
+                if do_datetime_ranges_overap(start_datetime, end_datetime, begin, end): # this task happens during the timeframe
+                    result.append(Event(task.start_date, task.start_time, task.duration, task))
+            elif type(task) is RecurringTask:
+                # this is the last occurrence of the recurring task. it is the datetime of the start of that occurrence 
+                last_occurrence_start_datetime = get_datetime_from_datetime(task.end_date, task.start_time)   
+
+                occurrence_start_datetime = get_datetime_from_datetime(task.start_date, task.start_time)
+
+                while occurrence_start_datetime < end_datetime and occurrence_start_datetime <= last_occurrence_start_datetime:
+                    occurrence_end_datetime = get_datetime_from_dur(occurrence_start_datetime, task.duration)
+
+                    # if this occurrence happens during the timeframe
+                    if do_datetime_ranges_overap(start_datetime, end_datetime, occurrence_start_datetime, occurrence_end_datetime):
+                        # check if theres any anti-task affecting this occurrence. if there are none, then this can be added as an event.
+                        # the specifications for the assignment requires that anti-task's start and end corresponds exactly with the recurring task, so this is an adequate check. 
+                        if not any(get_datetime_from_datetime(anti_task.start_date, anti_task.start_time) == occurrence_start_datetime for anti_task in task.anti_tasks):   
+                            occurrence_start_date, occurrence_start_time = get_date_and_time_from_datetime(occurrence_start_datetime)
+                            result.append(Event(occurrence_start_date, occurrence_start_time, task.duration, task))
+                        
+                    occurrence_start_datetime = occurrence_start_datetime + timedelta(days=task.frequency)
+        
+        result.sort(key=lambda event: get_datetime_from_datetime(event.start_date, event.start_time))
+
+        return result
+
     
+    # returns recurring or transient task object by name
     def find_task_by_name(self, name: str) -> Task:
         for task in self.tasks:
             if task.name == name:
                 return task
         return None
     
+
     # return list of RecurringTask objects in model
     def get_recurring_tasks(self):
         rec_list = list()
@@ -91,10 +139,13 @@ class Model:
 
         return at_list
     
+
     # function that dumps the whole schedule to JSON. in other words, this dumped JSON can be imported later, to restore the exact state of the system.
     def dump_full_schedule_to_json(self) -> str:
         return json.dumps([task.to_dict() for task in self.tasks], indent=2)
     
+
+    # imports task list from valid json file
     def import_schedule_from_json(self, json_str: str):
         try:
             task_dict_list = json.loads(json_str)
@@ -124,3 +175,53 @@ class Model:
             # if theres an exception, restore the Model back to its previous state, and throw another exception for the calling function.
             self.tasks = tasks_backup
             raise ValueError("Tasks Overlap")
+        
+
+    # deletes a transient or recurring task object from Model
+    # return True if successful, otherwise raises LookupError
+    def delete_task(self, task_name: str):
+        task = self.find_task_by_name(task_name)
+        if task != None:
+            # if anti task was in same spot as any transient task (the only case that needs to be checked for anti-task removal)
+            if type(task) is AntiTask and any(transient_datetimes_overlap(transient_task, task) for transient_task in self.get_transient_tasks()): 
+                raise ValueError("Anti Task is used by existing transient task")
+            
+            self.tasks.remove(task)
+            return True
+        
+        raise LookupError("Task with specified name does not exist in model")
+        
+
+    # edits a recurring or transient task object in Model
+    # parameters: task_name (string), task (new task object to replace specified task)
+    # return True if success, LookupError if taskname isn't in Model, TypeError if task 
+    # object type doesn't match object in Model, ValueError if edited task can't be added to Model
+    def edit_task(self, task_name: str, task: Task):
+
+        # identify task to be edited and raise error if does not exist in Model
+        target_task = self.find_task_by_name(task_name)
+        if target_task == None:
+            raise LookupError("Task with specified name does not exist in model")
+        
+        if not(type(target_task) is type(task)):
+            raise TypeError("New task does not match existing type")
+        
+        # re-apply any applicable anti-tasks from original task to new one
+        if type(target_task) is RecurringTask and type(task) is RecurringTask:
+            for atask in target_task.anti_tasks:
+                if can_apply_anti_task(atask, task):
+                    task.add_anti_task(atask)
+                    atask.reference_task(task)
+        
+        # make a backup up the current task list
+        temp_list = self.tasks.copy()  
+
+        # attempt to delete task and add edited version
+        try:
+            self.delete_task(task_name)
+            self.add_task(task)
+            return True
+        # restore tasklist and raise error if changes fail
+        except:
+            self.tasks = temp_list
+            raise ValueError("Failed to edit task, pontential overlap, anti-tasks will not carry over if they can't be re-added to modified task")

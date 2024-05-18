@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, 
+    QSpacerItem,QSizePolicy, QGroupBox, QDateEdit, QPushButton, QHeaderView, 
+    QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox,QGridLayout,
+    QStackedWidget, QRadioButton, QScrollArea, QDialogButtonBox, QFrame
 )
 from PyQt5.QtCore import Qt
 from .AddEventWindow import AddEventWindow  # Use relative import
@@ -8,6 +10,8 @@ import json
 from datetime import datetime
 from Controller import Controller
 from Task import Task, AntiTask, RecurringTask, TransientTask
+
+from .MonthView import MonthViewWidget
 
 class Viewer(QWidget):
     def __init__(self, controller: Controller):
@@ -40,6 +44,10 @@ class Viewer(QWidget):
         self.write_button = QPushButton("Write Schedule")
         self.write_button.clicked.connect(self.write_schedule_dialog)
         layout.addWidget(self.write_button)
+
+        self.view_schedule_button = QPushButton("View Schedule")
+        self.view_schedule_button.clicked.connect(self.view_schedule_dialog)
+        layout.addWidget(self.view_schedule_button)
 
         self.tableWidget.cellClicked.connect(self.edit_event_details)
 
@@ -75,9 +83,9 @@ class Viewer(QWidget):
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        layout.addWidget(self.tableWidget)
-
         self.populate_time_slots()
+
+        return self.tableWidget
 
     def populate_time_slots(self):
         hours = range(0, 24)
@@ -134,28 +142,159 @@ class Viewer(QWidget):
         if file_name:
             try:
                 self.controller.import_schedule_from_json_file(file_name)
+                self.refresh_views()
             except Exception as e:
                 QMessageBox.warning(self, "Error", f'Failed to load schedule: {str(e)}')
 
     def write_schedule_dialog(self):
-        dialog = WriteScheduleDialog(self)
+        dialog = WriteScheduleDialog(self, self.controller)
         dialog.exec_()
 
+    def view_schedule_dialog(self):
+        dialog = ViewScheduleDialog(self, self.controller)
+        dialog.exec_()
+
+    def refresh_views(self):
+        self.month_view_widget.update_month_view()
+
+
+class MonthViewWidget(QWidget):
+    def __init__(self, controller):
+        super().__init__()
+        self.controller = controller
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+
+        # Month and Year selection layout
+        date_selection_layout = QHBoxLayout()
+
+        self.month_combo = QComboBox()
+        self.month_combo.addItems(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+        self.month_combo.setCurrentIndex(QDate.currentDate().month() - 1)
+        self.month_combo.currentIndexChanged.connect(self.update_month_view)
+        
+        self.year_combo = QComboBox()
+        self.year_combo.addItems([str(year) for year in range(1900, 2101)])
+        self.year_combo.setCurrentText(str(QDate.currentDate().year()))
+        self.year_combo.currentIndexChanged.connect(self.update_month_view)
+
+        date_selection_layout.addWidget(QLabel("Select Month:"))
+        date_selection_layout.addWidget(self.month_combo)
+        date_selection_layout.addWidget(QLabel("Select Year:"))
+        date_selection_layout.addWidget(self.year_combo)
+
+        layout.addLayout(date_selection_layout)
+
+
+        layout.setSpacing(20)  
+        # ==== Add Weekday Headers ====
+        layout.addStretch(1) # this fills up extra space on the top
+        self.weekday_headers_layout = QHBoxLayout()
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+        # add a label for each weekday
+        for day in days_of_week:  
+            label = QLabel(day)
+            label.setAlignment(Qt.AlignCenter)  # Center align the text
+            self.weekday_headers_layout.addWidget(label)
+        layout.addLayout(self.weekday_headers_layout)
+
+        self.calendar_layout = QGridLayout()
+        layout.addLayout(self.calendar_layout)
+
+
+        # ==== Add Previous/Next month buttons ==== 
+        month_button_layout = QHBoxLayout()
+        last_month_button = QPushButton('<- Previous Month', self)
+        next_month_button = QPushButton('Next Month ->', self)
+
+        last_month_button.clicked.connect(lambda: self.move_month(-1))
+        next_month_button.clicked.connect(lambda: self.move_month(1))
+
+        month_button_layout.addWidget(last_month_button)
+        month_button_layout.addStretch(1)
+        month_button_layout.addWidget(next_month_button)
+        layout.addLayout(month_button_layout)
+
+        layout.addStretch(1) # this fills up the space on the bottom 
+
+
+        self.update_month_view()
+
+    # move forward or back (positive or negative)
+    def move_month(self, months_delta):
+        month_num = self.year_combo.currentIndex()*12 + self.month_combo.currentIndex() + months_delta
+        max_month_num = (self.year_combo.count()-1)*12 + 11
+
+        month_num = max(0, min(month_num, max_month_num)) # force month_num to be at least 0, and at most max_month_num
+        self.year_combo.setCurrentIndex(month_num//12)
+        self.month_combo.setCurrentIndex(month_num%12)
+        
+    def update_month_view(self):
+        # Clear the current calendar view
+        for i in reversed(range(self.calendar_layout.count())): 
+            widget = self.calendar_layout.itemAt(i).widget()
+            if widget is not None: 
+                widget.deleteLater()
+        
+        month = self.month_combo.currentIndex() + 1
+        year = int(self.year_combo.currentText())
+        first_day = QDate(year, month, 1)
+        start_day_of_week = first_day.dayOfWeek()
+        days_in_month = first_day.daysInMonth()
+
+        # Fill the calendar grid with days
+        day = 1
+        for i in range(start_day_of_week - 1, start_day_of_week - 1 + days_in_month):
+            date = QDate(year, month, day)
+            day_button = QPushButton(str(day))
+            day_button.setMinimumHeight(60)
+            if len(self.controller.get_events_within_timeframe(date.year() * 10000 + date.month() * 100 + date.day(), 1)) > 0:
+                day_button.setStyleSheet("background-color: #ffff78")
+            day_button.clicked.connect(lambda checked, date=date: self.view_tasks_for_date(date))
+            self.calendar_layout.addWidget(day_button, i // 7, i % 7)
+            day += 1
+
+    def view_tasks_for_date(self, date):
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
+        task_list = self.controller.get_events_within_timeframe(date_int, 1)
+        if task_list:
+            dialog = ScheduleDialog(self)
+            dialog.set_schedule(task_list)
+            dialog.exec_()
+        else:
+            QMessageBox.information(self, "Schedule", "No tasks found.")
+
 class WriteScheduleDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent, controller):
         super().__init__(parent)
+        self.controller = controller
         self.setWindowTitle("Write Schedule")
         self.setGeometry(200, 200, 300, 200)
 
         layout = QVBoxLayout(self)
 
-        self.file_name_input = QLineEdit()
         layout.addWidget(QLabel("File Name:"))
-        layout.addWidget(self.file_name_input)
+        
+        hbox = QHBoxLayout()
+        self.file_path_edit = QLineEdit()
+        hbox.addWidget(self.file_path_edit)
 
-        self.start_time_input = QLineEdit()
-        layout.addWidget(QLabel("Start Time (H:MM):"))
-        layout.addWidget(self.start_time_input)
+        browse_button = QPushButton('Browse')
+        browse_button.clicked.connect(self.open_file_dialog)
+        hbox.addWidget(browse_button)
+
+        layout.addLayout(hbox)
+
+        self.setLayout(layout)
+
+        layout.addWidget(QLabel("Start Date:"))
+        
+        self.dateedit = QDateEdit(calendarPopup=True)
+        layout.addWidget(self.dateedit)
+        self.dateedit.setDateTime(QDateTime.currentDateTime())
 
         self.schedule_type_combo = QComboBox()
         self.schedule_type_combo.addItems(["Day", "Week", "Month"])
@@ -172,12 +311,19 @@ class WriteScheduleDialog(QDialog):
         self.write_button.clicked.connect(self.write_schedule)
         self.cancel_button.clicked.connect(self.reject)
 
+    def open_file_dialog(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt)", options=options)
+        if file_path:
+            self.file_path_edit.setText(file_path)
+
+
     def write_schedule(self):
-        file_name = self.file_name_input.text()
-        start_time = self.start_time_input.text()
+        file_name = self.file_path_edit.text()
+        date = self.dateedit.date()
+        date_int = date.year() * 10000 + date.month() * 100 + date.day()
         schedule_type = self.schedule_type_combo.currentText()
 
-        # Implement the logic to write the schedule based on the provided parameters
-        # You can access the viewer to get schedule data and other relevant information
-
+        self.controller.write_schedule(file_name, date_int, schedule_type)
+        
         self.accept()

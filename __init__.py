@@ -1,5 +1,5 @@
 from Model import Model
-from Task.Task import Task, RecurringTask, TransientTask, AntiTask
+from Task import Task, RecurringTask, TransientTask, AntiTask
 
 t1 = RecurringTask("Task one", "...", 20200501, 9, 1.5, 20240510, 1)
 t2 = RecurringTask("Task two", "...", 20240509, 0, 0.25, 202405028, 1)

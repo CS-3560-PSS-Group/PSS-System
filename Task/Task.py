@@ -68,11 +68,19 @@ class AntiTask(Task):
 
 # Represents a single event that will be displayed on the calendar. Similar, but not the same as Task, because tasks may repeat (recurring tasks), or be negations like the anti taks
 class Event():
-    def __init__(self, name: str, is_recurring: bool, task_type: str, weekday: int, time: float, duration: float, extra_info: str):
-        self.name = name
-        self.is_recurring = is_recurring
-        self.task_type = task_type
-        self.weekday = weekday
-        self.time = time
+    def __init__(self, start_date: int, start_time: float, duration: float, task: Task): 
+        self.start_date = start_date
+        self.start_time = start_time
         self.duration = duration
-        self.extra_info = extra_info
+        self.task = task
+
+    # return it as a dictionary, which can then be used for JSON
+    def to_dict(self):
+        d = {
+            "Name": self.task.name,
+            "Type": self.task.task_type,
+            "Date": self.start_date,
+            "StartTime": self.start_time,
+            "Duration": self.duration
+        }
+        return d
