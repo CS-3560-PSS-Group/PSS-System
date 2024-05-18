@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QHeaderView, QFileDialog, QMessageBox, QLineEdit, QLabel, QDialog, QComboBox
 )
 from PyQt5.QtCore import Qt
-from Viewer.AddEventWindow import AddEventWindow
+from .AddEventWindow import AddEventWindow  # Use relative import
 import json
 from datetime import datetime
 from Controller import Controller
@@ -61,7 +61,7 @@ class Viewer(QWidget):
             QMessageBox.warning(self, "Error", "Please enter a task name to search.")
             return
         task = self.controller.find_task_by_name(task_name)
-        if task == None:
+        if task is None:
             QMessageBox.warning(self, "Error", f'Task with name "{task_name}" does not exist.')
         # Implement the logic to search for the task by name and display its information if found
         # You can use the viewer to access the schedule data and search for the task by name
@@ -131,7 +131,7 @@ class Viewer(QWidget):
 
     def load_schedule(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Schedule", "", "JSON Files (*.json)")
-        if file_name: 
+        if file_name:
             try:
                 self.controller.import_schedule_from_json_file(file_name)
             except Exception as e:
